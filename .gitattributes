@@ -1,0 +1,4 @@
+assets/*.init text eol=lf
+assets/*.conf text eol=lf
+assets/*.nft.tmpl text eol=lf
+scripts/*.py text eol=lf

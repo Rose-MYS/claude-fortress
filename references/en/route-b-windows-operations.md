@@ -1,0 +1,19 @@
+# Route B | Windows Guest Deployment, Verification & Host Boundaries
+
+## Protected Deployment Convention
+
+Deploy inside the guest as Administrator after explicit Tier-C confirmation using 64-bit Windows PowerShell 5.1. Store `route-b-common.ps1`, `guest-egress-guard.ps1`, `claude-env-check.ps1`, `guest-claude-gate.ps1`, and your private config in `%ProgramData%\ClaudeFortress`, with two equally protected subdirectories `reports` and `evidence`. Disable inherited user write permissions: `Administrators` and `SYSTEM` own and write; the dedicated non-admin desktop account gets Read/Execute only; verify no parent directory is a reparse point. Confirm Administrators control the proxy core and `sshd` paths/parents, and audit signatures, ACLs, tasks, and GPO sources. Run network probes under a controlled admin context that can write to `reports`; reports are desensitized by default (never share explicit diagnostic dumps).
+
+Fill a private copy of [route-b-config.example.json](../../assets/route-b-config.example.json) with target host/user SID, config generation, adapters, IPv4s, ports, and MSIX AppID/Publisher. Examples are intentionally non-runnable. Only the configured MSIX identity is supported — mismatches abort with no fuzzy name fallback.
+
+## S1 Functional Probes, Independent Evidence & S2/S3 Local Launch
+
+1. Offline first: run `guest-egress-guard.ps1 -ConfigPath <private_cfg> -Status -PolicyOnly`. Obtain explicit Tier-B approval covering neutral endpoints, proxy, and source-IP exposure, then run `claude-env-check.ps1 -ConfigPath <private_cfg> -RequestId <new_guid_N> -AuthorizedNeutralProbe`. Exit `0` proves only that dual-path IPv4 functional checks succeeded and the IPv6 probe received no reply — it does **not** prove DNS or IPv6 blocking.
+2. Using [route-b-evidence.example.json](../../assets/route-b-evidence.example.json), a trusted administrator who holds WAN captures and gateway/GPO configs reviews every boundary item (including **cold boot, warm reboot / reload failure, entry-block negative drill, DNS, IPv6, UDP/QUIC, WebRTC, and brand-new SSH**), binds the SHA-256 hashes of config, probe report, and private evidence bundle to the same `RequestId`, and writes the JSON into protected `evidence\`. Every applicable boundary item must be `pass`; do not downgrade `not_run`. Treat 24-hour evidence windows and 15-minute probe windows as freshness caps, not guarantees — invalidate immediately on any network, firmware, GPO, client, or generation change.
+3. The designated non-admin desktop user runs `guest-claude-gate.ps1 -Mode Launch -ConfigPath <private_cfg> -RequestId <ID>` locally. The script verifies evidence, prompts for an interactive live Tier-C confirmation within 120 seconds (never read from CLI args or old state files), re-verifies TTL/config/Guard, and reports activation requested. Concurrent runs return `BUSY` (no backlog queue). **This is a local anti-mislaunch helper, NOT a mandatory enforcement gate** — isolation is enforced by persistent network policies.
+
+## Optional Scheduled Task & Host Runbook
+
+Do **not** deploy auto-launch Windows tasks, accept SSH-injected launch requests, or build shared queues. If periodic offline policy auditing is desired, create an **Inspect-only** Scheduled Task invoking the fixed system PowerShell binary with `-NoProfile -NonInteractive -File "<protected guest-claude-gate.ps1>" -Mode Inspect -ConfigPath "<protected config>"` (never `-ExecutionPolicy Bypass`; admin-only task ACL; minimal service principal; 60s execution limit; no parallel instances).
+
+Host-side operations are management-only: verify gateway disk chain & hashes → confirm out-of-band console → boot isolated VM → open a brand-new SSH session with pinned host key to run Inspect or fetch desensitized receipts. SSH never mutates networks or sends launch requests, and the host never executes files returned by the guest.

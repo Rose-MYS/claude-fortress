@@ -1,0 +1,34 @@
+#!/bin/sh /etc/rc.common
+START=25
+STOP=89
+
+close_forwarding() {
+    printf '0\n' > /proc/sys/net/ipv4/ip_forward || return 1
+    if [ -e /proc/sys/net/ipv6/conf/all/forwarding ]; then
+        printf '0\n' > /proc/sys/net/ipv6/conf/all/forwarding || return 1
+        printf '0\n' > /proc/sys/net/ipv6/conf/default/forwarding || return 1
+    fi
+}
+
+with_lock() (
+    if ! command -v flock >/dev/null 2>&1; then close_forwarding; return 1; fi
+    umask 077
+    exec 9>/var/lock/claude-fortress.lock || { close_forwarding; return 1; }
+    flock -n 9 || return 1
+    "$@"
+)
+
+load_gateway() {
+    close_forwarding || return 1
+    trap 'close_forwarding; exit 1' HUP INT TERM
+    [ -f /etc/claude-fortress/gateway.nft ] || return 1
+    [ ! -L /etc/claude-fortress/gateway.nft ] || return 1
+    /usr/sbin/nft -c -f /etc/claude-fortress/gateway.nft || return 1
+    /usr/sbin/nft -f /etc/claude-fortress/gateway.nft || return 1
+    /usr/sbin/nft list table inet vm_gate >/dev/null || return 1
+    printf '1\n' > /proc/sys/net/ipv4/ip_forward || { close_forwarding; return 1; }
+}
+
+start() { with_lock load_gateway; }
+reload() { with_lock load_gateway; }
+stop() { with_lock close_forwarding; }

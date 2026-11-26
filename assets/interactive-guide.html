@@ -1,0 +1,1179 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Claude Fortress · 交互式路线图与新手 Agent 指南</title>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --bg-elev: #121a30;
+      --bg-card: #16203a;
+      --bg-hover: #1d2a4d;
+      --border: #26355c;
+      --border-strong: #3c5490;
+      --text: #eaf0ff;
+      --text-muted: #98a8cc;
+      --text-dim: #6f81aa;
+      --accent: #60a5fa;
+      --accent-soft: rgba(96, 165, 250, 0.14);
+      --tier-a: #34d399;
+      --tier-a-bg: rgba(52, 211, 153, 0.14);
+      --tier-b: #60a5fa;
+      --tier-b-bg: rgba(96, 165, 250, 0.14);
+      --tier-c: #f87171;
+      --tier-c-bg: rgba(248, 113, 113, 0.16);
+      --warn: #fbbf24;
+      --warn-bg: rgba(251, 191, 36, 0.14);
+      --radius: 14px;
+      --shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+    }
+
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: radial-gradient(circle at top right, #18254a 0%, var(--bg) 52%);
+      color: var(--text);
+      font-family: system-ui, -apple-system, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      line-height: 1.55;
+      min-height: 100vh;
+    }
+
+    .wrap {
+      max-width: 1320px;
+      margin: 0 auto;
+      padding: 20px 20px 56px;
+    }
+
+    /* Header */
+    .topbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 18px 22px;
+      background: rgba(18, 26, 48, 0.88);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      margin-bottom: 18px;
+    }
+    .brand h1 {
+      margin: 0;
+      font-size: 20px;
+      letter-spacing: 0.2px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .brand .tag {
+      font-size: 12px;
+      font-weight: 600;
+      padding: 2px 9px;
+      border-radius: 999px;
+      background: var(--tier-a-bg);
+      color: var(--tier-a);
+      border: 1px solid rgba(52, 211, 153, 0.35);
+    }
+    .brand p {
+      margin: 4px 0 0;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+    .top-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .btn {
+      appearance: none;
+      border: 1px solid var(--border-strong);
+      background: var(--bg-card);
+      color: var(--text);
+      padding: 8px 14px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.16s ease;
+    }
+    .btn:hover { background: var(--bg-hover); transform: translateY(-1px); }
+    .btn.primary {
+      background: linear-gradient(135deg, #2563eb, #3b82f6);
+      border-color: #60a5fa;
+      color: #fff;
+    }
+    .btn.primary:hover { filter: brightness(1.08); }
+    .btn.danger {
+      border-color: rgba(248, 113, 113, 0.45);
+      color: #fca5a5;
+    }
+
+    /* Quiz Card */
+    .quiz-panel {
+      background: var(--bg-elev);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 22px;
+      margin-bottom: 18px;
+    }
+    .quiz-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      cursor: pointer;
+    }
+    .quiz-header h2 {
+      margin: 0;
+      font-size: 15px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .quiz-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin-top: 14px;
+    }
+    .quiz-q {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 14px;
+    }
+    .quiz-q label.q-title {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 10px;
+      color: var(--text);
+    }
+    .opt-list {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+    .opt-btn {
+      text-align: left;
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: rgba(11, 16, 32, 0.55);
+      color: var(--text-muted);
+      font-size: 12.5px;
+      cursor: pointer;
+      transition: all 0.14s ease;
+    }
+    .opt-btn:hover { border-color: var(--border-strong); color: var(--text); }
+    .opt-btn.active {
+      background: var(--accent-soft);
+      border-color: var(--accent);
+      color: #fff;
+      font-weight: 600;
+    }
+    .quiz-result {
+      margin-top: 14px;
+      padding: 12px 16px;
+      border-radius: 10px;
+      background: rgba(52, 211, 153, 0.1);
+      border: 1px solid rgba(52, 211, 153, 0.35);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 13px;
+    }
+
+    /* Route Tabs */
+    .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .tab {
+      padding: 9px 14px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--bg-elev);
+      color: var(--text-muted);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      transition: all 0.15s ease;
+    }
+    .tab:hover { border-color: var(--border-strong); color: var(--text); }
+    .tab.active {
+      background: var(--accent-soft);
+      border-color: var(--accent);
+      color: #fff;
+    }
+    .tab .mini-pill {
+      font-size: 11px;
+      padding: 1px 6px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.08);
+      color: var(--text-muted);
+    }
+    .tab.active .mini-pill {
+      background: rgba(96, 165, 250, 0.28);
+      color: #dbeafe;
+    }
+    .tab-divider {
+      width: 1px;
+      background: var(--border-strong);
+      margin: 4px 4px;
+      align-self: stretch;
+    }
+    .tab.addon {
+      border-style: dashed;
+      border-color: rgba(251, 191, 36, 0.45);
+      color: #fde68a;
+    }
+    .tab.addon.active {
+      border-style: solid;
+      border-color: var(--warn);
+      background: var(--warn-bg);
+      color: #fef3c7;
+    }
+
+    /* Main Split Layout */
+    .main-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) minmax(340px, 0.85fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    /* Route Banner & Progress */
+    .route-card {
+      background: var(--bg-elev);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+    }
+    .route-meta {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .route-meta h2 { margin: 0; font-size: 17px; }
+    .route-desc {
+      margin: 0 0 14px;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+    .progress-bar-wrap {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+      font-size: 12.5px;
+      color: var(--text-muted);
+    }
+    .progress-track {
+      flex: 1;
+      height: 8px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.08);
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--tier-a), var(--accent));
+      transition: width 0.25s ease;
+    }
+
+    /* Flowchart Nodes */
+    .flow-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+    .flow-connector {
+      display: flex;
+      justify-content: center;
+      height: 22px;
+      color: var(--border-strong);
+      font-size: 15px;
+      line-height: 22px;
+      user-select: none;
+    }
+    .node {
+      display: grid;
+      grid-template-columns: 28px minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+      padding: 13px 15px;
+      border-radius: 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: all 0.16s ease;
+    }
+    .node:hover {
+      background: var(--bg-hover);
+      border-color: var(--border-strong);
+    }
+    .node.selected {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.25);
+      background: #1b284b;
+    }
+    .node.done {
+      border-color: rgba(52, 211, 153, 0.45);
+    }
+    .node-check {
+      width: 22px;
+      height: 22px;
+      border-radius: 6px;
+      border: 1.5px solid var(--border-strong);
+      background: rgba(11, 16, 32, 0.7);
+      color: #0b1020;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .node.done .node-check {
+      background: var(--tier-a);
+      border-color: var(--tier-a);
+    }
+    .node-title-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+    .node-step {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--accent);
+      background: var(--accent-soft);
+      padding: 1px 7px;
+      border-radius: 6px;
+    }
+    .node-title {
+      font-size: 14px;
+      font-weight: 650;
+      color: var(--text);
+    }
+    .node-sub {
+      font-size: 12.5px;
+      color: var(--text-muted);
+      margin-top: 3px;
+    }
+    .badges {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 5px;
+    }
+    .badge {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+    .badge.tier-A { background: var(--tier-a-bg); color: var(--tier-a); border: 1px solid rgba(52, 211, 153, 0.35); }
+    .badge.tier-B { background: var(--tier-b-bg); color: var(--tier-b); border: 1px solid rgba(96, 165, 250, 0.35); }
+    .badge.tier-C { background: var(--tier-c-bg); color: var(--tier-c); border: 1px solid rgba(248, 113, 113, 0.4); }
+    .badge.actor  { background: rgba(255,255,255,0.07); color: var(--text-muted); border: 1px solid var(--border); }
+
+    /* Detail Drawer */
+    .drawer {
+      position: sticky;
+      top: 16px;
+      background: var(--bg-elev);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      box-shadow: var(--shadow);
+    }
+    .drawer-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 14px;
+    }
+    .drawer-head h3 { margin: 0; font-size: 16px; }
+    .detail-sec { margin-bottom: 14px; }
+    .detail-sec h4 {
+      margin: 0 0 6px;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-dim);
+    }
+    .detail-sec p, .detail-sec ul {
+      margin: 0;
+      font-size: 13.5px;
+      color: var(--text);
+    }
+    .detail-sec ul { padding-left: 18px; }
+    .detail-sec li { margin-bottom: 4px; }
+    .warn-box {
+      background: var(--warn-bg);
+      border: 1px solid rgba(251, 191, 36, 0.38);
+      color: #fde68a;
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 12.8px;
+    }
+    .file-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .chip {
+      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+      font-size: 12px;
+      padding: 4px 8px;
+      border-radius: 7px;
+      background: rgba(11, 16, 32, 0.8);
+      border: 1px solid var(--border);
+      color: #bfdbfe;
+    }
+    .prompt-box {
+      background: #090e1c;
+      border: 1px solid var(--border-strong);
+      border-radius: 10px;
+      padding: 12px;
+      font-size: 13px;
+      color: #dbeafe;
+      white-space: pre-wrap;
+      word-break: break-word;
+      margin-bottom: 10px;
+    }
+    .drawer-footer {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    /* Modal */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(5, 8, 18, 0.72);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      z-index: 50;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal {
+      max-width: 720px;
+      width: 100%;
+      background: var(--bg-elev);
+      border: 1px solid var(--border-strong);
+      border-radius: 16px;
+      padding: 22px;
+      box-shadow: var(--shadow);
+      max-height: 88vh;
+      overflow-y: auto;
+    }
+    .modal-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .modal-head h3 { margin: 0; font-size: 17px; }
+    .guide-cards {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+    .guide-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+    }
+    .guide-card h4 { margin: 0 0 6px; font-size: 14px; color: var(--accent); }
+    .guide-card p { margin: 0; font-size: 13px; color: var(--text-muted); }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: #10b981;
+      color: #052e16;
+      font-weight: 700;
+      font-size: 13px;
+      padding: 10px 18px;
+      border-radius: 999px;
+      box-shadow: var(--shadow);
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.2s ease;
+      z-index: 60;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    @media (max-width: 960px) {
+      .quiz-grid { grid-template-columns: 1fr; }
+      .main-grid { grid-template-columns: 1fr; }
+      .drawer { position: static; }
+      .guide-cards { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <!-- Top Bar -->
+    <header class="topbar">
+      <div class="brand">
+        <h1>
+          Claude Fortress 交互式路线图
+          <span class="tag">本地打开才离线 · 未实机验收</span>
+        </h1>
+        <p>不懂 Agent 也能一步步走完：先选路线 → 点开节点看清风险档位 → 一键复制指令发给你的 Agent。</p>
+      </div>
+      <div class="top-actions">
+        <a class="btn" href="interactive-guide.en.html" style="text-decoration:none;display:inline-flex;align-items:center;">English</a>
+        <button class="btn primary" id="btnBeginner">新手 Agent 速成指南</button>
+        <button class="btn danger" id="btnReset">重置本地进度</button>
+      </div>
+    </header>
+
+    <!-- 30s Route Quiz -->
+    <section class="quiz-panel">
+      <div class="quiz-header" id="quizToggle">
+        <h2>🧭 30 秒选路向导（点选 3 个问题，自动高亮最适合你的路线）</h2>
+        <span style="font-size:12px;color:var(--text-muted);" id="quizToggleText">收起 ▲</span>
+      </div>
+      <div id="quizBody">
+        <div class="quiz-grid">
+          <div class="quiz-q">
+            <label class="q-title">1. 你目前的状态是什么？</label>
+            <div class="opt-list" data-q="goal">
+              <button class="opt-btn active" data-val="new">从零搭建安全的 Claude 使用环境</button>
+              <button class="opt-btn" data-val="trouble">已经遇到登录失败、超时或受限要排障</button>
+              <button class="opt-btn" data-val="collab">只看多 Agent 可选扩展</button>
+            </div>
+          </div>
+          <div class="quiz-q">
+            <label class="q-title">2. 你的机器条件和偏好？</label>
+            <div class="opt-list" data-q="machine">
+              <button class="opt-btn active" data-val="vm">Windows ≥16GB 内存，追求最高安全隔离</button>
+              <button class="opt-btn" data-val="light">内存紧张 / 不想开虚拟机，追求轻量</button>
+              <button class="opt-btn" data-val="whole">单机整机统一走单一固定出口</button>
+              <button class="opt-btn" data-val="vps">有纯净海外 Linux VPS，偏好终端开发</button>
+            </div>
+          </div>
+          <div class="quiz-q">
+            <label class="q-title">3. 是否需要使用 Claude Desktop 桌面客户端？</label>
+            <div class="opt-list" data-q="desktop">
+              <button class="opt-btn active" data-val="yes">需要（桌面端 + 命令行都要用）</button>
+              <button class="opt-btn" data-val="no">不需要（只用网页版 + Claude Code 命令行）</button>
+            </div>
+          </div>
+        </div>
+        <div class="quiz-result" id="quizResult"></div>
+      </div>
+    </section>
+
+    <!-- Route Tabs -->
+    <nav class="tabs" id="routeTabs"></nav>
+
+    <!-- Main Flowchart + Detail Drawer -->
+    <main class="main-grid">
+      <section class="route-card">
+        <div class="route-meta">
+          <h2 id="routeTitle"></h2>
+          <span class="badge actor" id="routeMaturity"></span>
+        </div>
+        <p class="route-desc" id="routeDesc"></p>
+        <div class="progress-bar-wrap">
+          <span id="progressText">已完成 0 / 0</span>
+          <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+        </div>
+        <div class="flow-list" id="flowList"></div>
+      </section>
+
+      <aside class="drawer" id="detailDrawer">
+        <div class="drawer-head">
+          <h3 id="dTitle">请选择左侧任意步骤</h3>
+          <div style="display:flex;gap:6px;" id="dBadges"></div>
+        </div>
+        <div class="detail-sec">
+          <h4>这一步做什么</h4>
+          <p id="dSummary"></p>
+        </div>
+        <div class="detail-sec" id="dWarnWrap" style="display:none;">
+          <h4>红线与注意事项</h4>
+          <div class="warn-box" id="dWarn"></div>
+        </div>
+        <div class="detail-sec">
+          <h4>通过标志（做到什么算完成）</h4>
+          <ul id="dDoneList"></ul>
+        </div>
+        <div class="detail-sec">
+          <h4>关联 Skill 手册与脚本</h4>
+          <div class="file-chips" id="dFiles"></div>
+        </div>
+        <div class="detail-sec">
+          <h4>📋 一键复制：直接发给 Agent 的标准指令</h4>
+          <div class="prompt-box" id="dPrompt" tabindex="0"></div>
+          <p>复制不是批准，勾选不是证据。打开托管页面需要联网；本地文件本身不外联。</p>
+          <div class="drawer-footer">
+            <button class="btn primary" id="btnCopyPrompt">复制这条指令给 Agent</button>
+            <button class="btn" id="btnToggleDone">标记为已完成</button>
+          </div>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <!-- Beginner Modal -->
+  <div class="modal-backdrop" id="beginnerModal">
+    <div class="modal">
+      <div class="modal-head">
+        <h3>🎓 新手 1 分钟学会指挥 Agent 使用本 Skill</h3>
+        <button class="btn" id="btnCloseModal">关闭</button>
+      </div>
+      <div class="guide-cards">
+        <div class="guide-card">
+          <h4>1. 先把 Skill 放到正确目录</h4>
+          <p>只复制 <code>claude-fortress/</code> 文件夹到宿主目录：Claude Code 放 <code>~/.claude/skills/</code>（项目级 <code>.claude/skills/</code>）；其他 Agent 以其实际启用的 Skills 目录为准。</p>
+        </div>
+        <div class="guide-card">
+          <h4>2. 不用背命令，复制话术就行</h4>
+          <p>在本页面选好路线，点开第 1 步，点「复制这条指令给 Agent」直接发给它。Agent 会按 <code>已确认 / 还没查 / 下一步</code> 给你清晰汇报。</p>
+        </div>
+        <div class="guide-card">
+          <h4>3. 看懂 A / B / C 三档安全徽章</h4>
+          <p><strong style="color:var(--tier-a)">A 档（绿）</strong>纯只读查状态；<strong style="color:var(--tier-b)">B 档（蓝）</strong>可撤销配置或中性探测；<strong style="color:var(--tier-c)">C 档（红）</strong>涉及断网、防火墙、清理或接触 Claude，Agent 必须暂停等你明确点头。</p>
+        </div>
+        <div class="guide-card">
+          <h4>4. 两条隐私保命铁律</h4>
+          <p>绝不把密码、订阅链接 token、私钥、真实姓名/网名贴进公开仓库；注册、登录、付款与申诉永远由你本人在官方页面完成。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast">已复制到剪贴板，去粘贴发给 Agent 吧！</div>
+
+  <script>
+    const STORAGE_KEY = 'claude_fortress_guide_done_v1';
+
+    const ROUTES = {
+      B: {
+        id: 'B',
+        tab: '路线 B：VM 隔离堡垒',
+        pill: '主力推荐',
+        maturity: '参数化参考实现 · 须在本机完成冷/热启动自验',
+        title: '路线 B：Windows VM + 独立 OpenWrt 网关隔离堡垒',
+        desc: '隔离设计：专用 OpenWrt 网关 + Windows GPO。模板不替你的机器担保，正式接入账号前须在你本机亲自完成冷启动、热启动/重载与入口阻断自检。',
+        steps: [
+          {
+            id: 'B-1', stage: 'S0 离线盘点', title: '宿主机只读体检',
+            sub: '核对内存、磁盘、虚拟化与 VMnet8 网段，不发外部请求',
+            tier: 'A', actor: 'Agent 执行',
+            summary: '由 Agent 离线只读检查宿主机系统版本、可用内存/磁盘、VMware Workstation 安装状态、网卡与现有代理进程，形成脱敏基线。',
+            warn: '严格处于 PC0 阶段：不发任何公网探测，不接触任何 Claude/Anthropic 端点。',
+            done: ['确认宿主机 ≥16 GB 内存与 ≥80 GB 可用磁盘', '确认虚拟化平台与 VMnet8 网段无冲突', '生成脱敏状态摘要'],
+            files: ['SKILL.md', 'references/01-route-selection-and-preflight.md', 'assets/session-state.example.json'],
+            prompt: '请按 claude-fortress 的 S0 阶段（路线 B），对我当前宿主机做 A 档纯离线只读盘点（检查系统版本、内存磁盘、虚拟化软件、网卡与代理进程），不要发任何外部网络请求，最后按「已确认 / 还没查 / 下一步」三段汇报。'
+          },
+          {
+            id: 'B-2', stage: '搭建 1/4', title: '先建隔离网段与 OpenWrt 默认拒绝网关',
+            sub: '先关门再放人：加载含 input/output/forward 的独占 nftables 规则',
+            tier: 'C', actor: '共同确认',
+            summary: '创建 VMware 专用 LAN Segment（VM-Egress-Isolated）并部署轻量 OpenWrt 网关；停用网关 DNS 转发，加载独占 nftables 模板（先阻断 IPv6，再开启 IPv4 转发），并在宿主机留好应急描述副本。',
+            warn: '必须先建隔离网段与默认拒绝网关，再接入客机；只在专用网关使用手册的持久化加载流程；不全局清空规则。',
+            done: ['OpenWrt 通过 nft -c 语法校验并加载生效', 'IPv6 转发永久关闭且无网关本机 DNS 转发', '宿主机已备份网关应急描述文件'],
+            files: ['references/03-route-b-vm-openwrt-fortress.md', 'assets/openwrt-vm-gateway.nft.tmpl'],
+            prompt: '我准备进入 claude-fortress 路线 B 阶段 1：搭建 VMware 隔离网段与 OpenWrt 默认拒绝网关。请先读 references/03-route-b-vm-openwrt-fortress.md 和 assets/openwrt-vm-gateway.nft.tmpl，给我出一份 C 档确认单和占位符核对清单（不要写入真实敏感信息），等我确认后再逐步执行。'
+          },
+          {
+            id: 'B-3', stage: '搭建 2/4', title: '离线准备 Windows 客机与 GPO 白名单',
+            sub: '唯一网卡接隔离网段，配置三配置默认阻断 + 守护脚本',
+            tier: 'C', actor: '共同确认',
+            summary: '新建单网卡 Windows 11 客机接入隔离网段，通过离线介质安装基础工具与 Clash Verge，配置本地组策略（GPO）默认阻断入/出站并仅放行 6 条最小白名单，部署 guest-egress-guard.ps1 校验。',
+            warn: '任何已有 Claude 认证态的客机严禁接回普通 NAT；切记保留 DHCP 广播 255.255.255.255。',
+            done: ['客机仅有一块物理网卡且位于隔离网段', 'guest-egress-guard.ps1 -Status 返回 Policy=OK 且 Transport=OK'],
+            files: ['references/03-route-b-vm-openwrt-fortress.md', 'scripts/guest-egress-guard.ps1'],
+            prompt: '请按 claude-fortress 路线 B 阶段 2-3，指导我在隔离网段内准备 Windows 客机并部署 GPO 默认阻断防火墙与 scripts/guest-egress-guard.ps1。先列出需要我核对的网卡名、代理核心路径和参数，出具 C 档确认单。'
+          },
+          {
+            id: 'B-4', stage: '搭建 3/4', title: '宿主机 TUN 防冲突规则（先评估影响）',
+            sub: '仅宿主机开 TUN 时前置 vmnat.exe 直连（不含 MATCH）',
+            tier: 'C', actor: '共同确认',
+            summary: '如果宿主机同时开 Clash TUN，先核实宿主机无其他依赖 TUN 的 NAT 客机，再将不含 MATCH 的 vmnat.exe 规则前置到宿主机规则模式扩展中，消除双层代理嵌套超时。',
+            warn: '绝对不要在 prepend 片段里写 MATCH，以免截断宿主机原有分流规则。',
+            done: ['宿主机规则合并后原有分流不受影响', '宿主机切换 TUN 与系统代理时 VM 延迟均正常'],
+            files: ['assets/host-clash-vmnat-bypass.yaml', 'references/07-troubleshooting-and-cleanup.md'],
+            prompt: '请拟定宿主 VMware NAT 例外评估卡，列出其他 NAT 客机的影响和回滚。影响隔离或其他客机出口时按 C 档。'
+          },
+          {
+            id: 'B-5', stage: 'S1 本机必做自验', title: '中性自检 + 冷/热启动与负向断网演练',
+            sub: 'B：中性功能探针；C：另批冷/热启动、重载与限时入口阻断自检',
+            tier: 'C', actor: '分档确认',
+            summary: '正式接账号前必须在你的机器上亲自完成四项检查：① 中性功能探针；② 网关与 VM 完全关机后的冷启动自检；③ 网关重启/规则重载/宿主机切 TUN 或休眠唤醒的热启动自检（并测新建 SSH）；④ 获 C 档批准后的限时入口阻断负向演练。',
+            warn: '本阶段仍绝不接触 Claude 端点；严禁靠停掉 clash_verge_service 测试断网；未在你本机跑通冷/热启动与断网自检前，切勿接入正式账号。',
+            done: ['已完成两条路径的中性功能观测与 DNS/IPv6/WebRTC 独立核对', '冷启动与热启动/重载后均无直连泄露且新建管理 SSH 可达', '入口限时阻断演练期间双路径彻底断网、到期自动恢复'],
+            files: ['references/01-route-selection-and-preflight.md', 'scripts/claude-env-check.ps1', 'scripts/guest-claude-gate.ps1'],
+            prompt: '请分别拟定 B 档中性功能探针卡，以及 C 档「本机冷启动 + 热启动/重载 + 入口限时阻断」自检清单；明确每步需要我亲自核对的现象、WAN 证据与新建 SSH 验证。'
+          },
+          {
+            id: 'B-6', stage: 'S2-S4 上线', title: '门控启动与本人登录/订阅',
+            sub: '用户本人在桌面临时批准；不部署自动启动任务',
+            tier: 'C', actor: '你本人做',
+            summary: 'S1 关键证据必须全为 pass，用户单独确认后才用防误启动辅助，并自行确认应用状态。',
+            warn: '注册、登录、付款与申诉一律由你本人操作，Agent 绝不代操、不索要凭据。',
+            done: ['辅助脚本完成身份、证据和 TTL 核对，只报告已请求激活', '账号与支付由本人在官方页面确认完成'],
+            files: ['scripts/guest-claude-gate.ps1', 'references/05-account-payment-and-sop.md'],
+            prompt: '请核对 S1 已有证据，不默认它们已通过。若全部适用项均通过，再拟定 S2 首次接触确认单；不要部署自动拉起任务。'
+          }
+        ]
+      },
+      A1: {
+        id: 'A1',
+        tab: '路线 A1：指纹浏览器 + CLI',
+        pill: '轻量推荐',
+        maturity: '模板 · 应用层分流（非 Fail-Closed）',
+        title: '路线 A1：独立指纹浏览器 + Claude Code 干净子进程隔离',
+        desc: '零虚拟机开销，适合内存紧张且只需要 Web + Claude Code 的用户：一节点一独立浏览器环境（自动对齐语言/时区/DNS），CLI 用干净子进程门控启动；不建议宿主机裸装 Claude Desktop。',
+        steps: [
+          {
+            id: 'A1-1', stage: 'S0 离线盘点', title: '确认边界与本地代理端口',
+            sub: '检查本地 HTTP/mixed 代理端口与现有环境变量，不发外网请求',
+            tier: 'A', actor: 'Agent 执行',
+            summary: '由 Agent 离线检查当前 OS、已安装的代理客户端本地监听端口（注意：Claude Code 官方不支持直接走纯 SOCKS，须提供 HTTP/mixed 端口）及当前终端环境变量。',
+            warn: '先明确认知：路线 A1 是应用层分流，不是 OS 级 Fail-Closed，且不建议在宿主机安装 Claude Desktop。',
+            done: ['确认存在可用的本地 HTTP/mixed 代理端口', '明确排除宿主机 Claude Desktop 裸装'],
+            files: ['references/01-route-selection-and-preflight.md', 'references/02-route-a-local-and-fingerprint.md'],
+            prompt: '我想走 claude-fortress 的路线 A1（指纹浏览器 + Claude Code 轻量隔离）。请先做 S0 离线盘点，帮我核查本地 HTTP/mixed 代理端口与终端环境变量，不要发外部请求。'
+          },
+          {
+            id: 'A1-2', stage: 'Web 端隔离', title: '配置「一节点一独立浏览器」与属性自动联动',
+            sub: '每个节点独立数据目录隔离 Cookie，启动时自动对齐语言/时区/DNS',
+            tier: 'B', actor: '共同确认',
+            summary: '为 Claude 准备独立指纹浏览器环境（作者建议：搭建指纹浏览器等前期工具优先用 GPT / Codex 协助）。采用一节点一独立 user-data-dir 彻底隔离 Cookie，启动时按出口节点自动联动语言、时区与远程 DNS，禁用代理失败回退直连。',
+            warn: '严禁开启代理失效自动回退直连；探测失败或出口偏离预期时必须拒绝拉起浏览器。',
+            done: ['独立浏览器 Profile 与日常浏览器完全隔离', '禁用 WebRTC 泄露、启用远程 DNS、对齐出口时区与语言'],
+            files: ['references/02-route-a-local-and-fingerprint.md'],
+            prompt: '请按 claude-fortress 的 references/02-route-a-local-and-fingerprint.md，帮我核对「一节点一独立指纹浏览器（自动联动语言/时区/DNS）」的配置检查清单，并指出最容易漏掉的泄露点。'
+          },
+          {
+            id: 'A1-3', stage: 'CLI 端隔离', title: '部署 Claude Code 干净子进程门控启动脚本',
+            sub: '清理继承代理变量 → 双中性站点校验 IP → 注入隔离配置目录启动',
+            tier: 'B', actor: 'Agent 执行',
+            summary: '按你的系统（PowerShell 或 Bash）生成干净子进程封装脚本：先清空继承的大小写代理变量与 ANTHROPIC_BASE_URL，用双中性端点验证出口 IP 匹配，再以独立 CLAUDE_CONFIG_DIR 和固定可执行路径启动。',
+            warn: '不要直接复用全局环境变量，也不要用纯 SOCKS 地址填给 Claude Code。',
+            done: ['生成本地门控启动脚本并核对路径', '故意填错期望 IP 时脚本成功拦截并退出'],
+            files: ['references/02-route-a-local-and-fingerprint.md'],
+            prompt: '请拟定两张独立的卡：B 档只跑中性探针，C 档才由本人启动。说明凭据变量隔离，不串联两步。'
+          },
+          {
+            id: 'A1-4', stage: 'S1-S4 验收上线', title: '中性预验收后由本人登录使用',
+            sub: '独立浏览器与 CLI 均通过中性 IP/DNS/WebRTC 校验后再进入官方页',
+            tier: 'C', actor: '你本人做',
+            summary: '分别完成浏览器与 CLI 的 S1，WebRTC 只在浏览器验收，DNS 需要独立证据，通过后由你本人在官方页面登录使用。',
+            warn: '如未来需要使用 Claude Desktop 或需要 OS 级断网防泄露，请升级到路线 B。',
+            done: ['独立浏览器与 CLI 均通过 S1 中性验收', '本人完成官方登录'],
+            files: ['references/01-route-selection-and-preflight.md', 'references/05-account-payment-and-sop.md'],
+            prompt: '请列出浏览器与 CLI 各自的 S1 证据清单，WebRTC 只对浏览器适用；缺项不出 S2 放行结论。'
+          }
+        ]
+      },
+      A2: {
+        id: 'A2',
+        tab: '路线 A2：本机整机防护',
+        pill: '参考设计',
+        maturity: '参考设计 · 按平台核验',
+        title: '路线 A2：本机整机 TUN（IPv4 Only）+ OS 防火墙防直连',
+        desc: '适合单机整机统一走单一固定住宅/ISP 出口的用户。必须同时做到 TUN 接管 + 关闭 IPv6 + OS 防火墙出站默认阻断，并通过睡眠唤醒与断入口负向测试。',
+        steps: [
+          {
+            id: 'A2-1', stage: 'S0 离线盘点', title: '识别平台能力与现有网络依赖',
+            sub: '核对 Windows GPO / macOS PF / Linux nftables 适配边界',
+            tier: 'A', actor: 'Agent 执行',
+            summary: '检查当前操作系统与版本、代理客户端、现有防火墙策略和局域网/VPN 依赖，确认回滚方案。',
+            warn: 'Clash 的 TUN 或 Global 模式本身不等于防直连，断代理防直连必须靠 OS 防火墙另做。',
+            done: ['明确当前 OS 的防火墙方案与回滚路径', '确认哪些本地/LAN 例外必须保留'],
+            files: ['references/01-route-selection-and-preflight.md', 'references/02-route-a-local-and-fingerprint.md'],
+            prompt: '我想了解 claude-fortress 的路线 A2（本机整机防护）。请先做 S0 离线盘点，告诉我当前系统对应的防火墙机制、风险点以及必须保留的恢复路径。'
+          },
+          {
+            id: 'A2-2', stage: '配置与防直连', title: '配置 TUN + IPv4 Only + OS 防火墙出站白名单',
+            sub: '先留独立回滚脚本，再启用出站默认阻断',
+            tier: 'C', actor: '共同确认',
+            summary: '开启代理 TUN 并关闭核心与网卡 IPv6；在留好一键回滚脚本的前提下，配置 OS 防火墙出站默认阻断，仅放行代理核心访问固定入口、TUN、回环与必要 DHCP/LAN。',
+            warn: 'Agent 就在被改网络的机器上操作时，必须先确认独立恢复方案，切忌把自己锁死。',
+            done: ['已保存独立回滚备份', 'OS 防火墙默认阻断生效且无 IPv6 泄漏'],
+            files: ['references/02-route-a-local-and-fingerprint.md', 'scripts/guest-egress-guard.ps1'],
+            prompt: '请按 claude-fortress 路线 A2 为我当前系统出具 C 档防火墙与 IPv4 Only 变更确认单，包含明确备份、例外范围与一键回滚方案，等我批准后再动手。'
+          },
+          {
+            id: 'A2-3', stage: 'S1 负向验收', title: '断代理 + 睡眠唤醒负向测试',
+            sub: '验证网络切换、休眠恢复与入口失效时均不回退直连',
+            tier: 'C', actor: '分档确认',
+            summary: '依次完成中性双端点 IP/DNS/IPv6 检查，并测试阻断入口、切 Wi-Fi 或休眠唤醒后普通进程不会回退直连。',
+            warn: '未完成负向测试前，禁止把整机状态标为通过。',
+            done: ['正向 IP/DNS/IPv6 全绿', '负向断入口与休眠恢复均无直连泄露'],
+            files: ['references/01-route-selection-and-preflight.md', 'references/02-route-a-local-and-fingerprint.md'],
+            prompt: '请分开准备 B 档中性探测和 C 档可能断网的演练卡，先核对带外恢复。'
+          }
+        ]
+      },
+      C: {
+        id: 'C',
+        tab: '路线 C：远程 VPS 开发机',
+        pill: '参考设计',
+        maturity: '参考设计 · Linux 终端',
+        title: '路线 C：远程 Ubuntu/Linux VPS 开发机',
+        desc: '适合偏好纯 Linux 终端开发的用户。核心是先选清“原生纯净出口（C1）”还是“普通算力机 + 出站默认拒绝套住宅代理（C2）”，切忌拿普通机房 VPS 原生 IP 硬上。',
+        steps: [
+          {
+            id: 'C-1', stage: 'S0 选型与防锁死', title: '确认 C1/C2 模式并核验云商带外控制台',
+            sub: '改防火墙前必须先确认 VNC / Web Console 可用',
+            tier: 'A', actor: '共同确认',
+            summary: '确认 VPS 出口属于纯净静态 ISP（C1）还是普通机房（必须走 C2 出站默认拒绝 + 住宅代理），并先核实云商网页控制台可用。',
+            warn: '切忌用普通机房 VPS 原生 IP 直接登 Claude；如参考社区图形化工具（如 safe-code），仍须解决出口纯净度并慎用订阅转 API 网关与反向 SSH 控宿主机。',
+            done: ['明确选择 C1 或 C2 模式', '确认带外 VNC/Web Console 可正常登录'],
+            files: ['references/04-route-c-vps-devbox.md'],
+            prompt: '我打算走 claude-fortress 的路线 C（远程 VPS 开发机）。请读 references/04-route-c-vps-devbox.md，帮我判断我的 VPS 应该走 C1 还是 C2 模式，并列出防锁死前置检查清单。'
+          },
+          {
+            id: 'C-2', stage: '安全加固', title: 'SSH 加固 + 定时回滚保护下的防火墙部署',
+            sub: '先起自动回滚定时器再加载 nftables 出站规则',
+            tier: 'C', actor: '共同确认',
+            summary: '配置 SSH 仅密钥登录与 fail2ban，同步出口时区与 IPv6 策略；模式 C2 下先挂 3 分钟自动回滚定时器再加载出站默认拒绝规则。',
+            warn: '保留旧会话；另建 SSH 并验证认证、权限和预期出口边界才取消回滚。',
+            done: ['SSH 仅密钥登录生效', '防火墙加载后管理通道正常且已取消临时回滚'],
+            files: ['references/04-route-c-vps-devbox.md'],
+            prompt: '请按 claude-fortress 路线 C 为我的 VPS 出具 C 档加固与防火墙变更确认单（包含带外恢复与自动回滚定时器命令）。'
+          },
+          {
+            id: 'C-3', stage: 'S1 验收与 IDE 边界', title: '中性出口/DNS 验收与 Remote-SSH 边界核查',
+            sub: '确保本地 IDE 扩展不会在宿主机侧发起请求',
+            tier: 'C', actor: 'C1/B；C2 阻断/C',
+            summary: '在 VPS 终端完成中性 IPv4/IPv6/DNS 核验（C2 需做负向演练）；若用 Remote-SSH 或容器，核查端口转发与本地/远端扩展边界。',
+            warn: '避免本地 IDE 扩展在宿主机侧直接连接外部服务。',
+            done: ['VPS 中性出口与 DNS 验收通过', 'Remote-SSH 与容器边界已确认'],
+            files: ['references/04-route-c-vps-devbox.md', 'references/01-route-selection-and-preflight.md'],
+            prompt: '请给 C1 和 C2 分别拟定验收卡：C1 校验原生出口，C2 主动阻断须单独 C 档；演练须核验新建 SSH。'
+          }
+        ]
+      },
+      ADDON: {
+        id: 'ADDON',
+        isAddon: true,
+        tab: '✨ 进阶扩展：多 Agent 协作',
+        pill: '可独立使用',
+        maturity: '可选进阶扩展 · 模型无关（Claude / Codex / Gemini 通用）',
+        title: '搭完后的可选进阶扩展：多 Agent 协同工作区与大文件本地优先管线',
+        desc: '本模块与 Claude 本身无关，建议先用上方主路线把环境安全跑通后再按需启用。提供宿主机/客机物理分权共享区、宿客各自私有 Git 仓、7 节交接文档制度与 to_md.py 本地大文件转 Markdown 管线。',
+        steps: [
+          {
+            id: 'ADDON-1', stage: '权限规划', title: '物理拆分只读投递与可写回传目录',
+            sub: '宿主机可信工具 tools-ro 对客机只读，防止 VM 反向击穿宿主机',
+            tier: 'B', actor: '共同确认',
+            summary: '按 tools-ro（只读）、inbox-ro（只读）、outbox-rw（客机可写、宿主视为不可信输入）、各自私有 projects（不共享 .git）规划挂载权限。',
+            warn: '宿主机绝不自动执行客机可写目录中的脚本或 Hook，也不盲信交接文本中的隐含指令。',
+            done: ['明确各共享目录读写边界', '外层 Git 忽略 projects、inbox-ro、outbox-rw、artifacts'],
+            files: ['references/06-multi-agent-and-local-first.md'],
+            prompt: '我只想使用 claude-fortress 的可选多 Agent 协作扩展，不需要问账号和代理。请读 references/06-multi-agent-and-local-first.md，帮我规划物理分权的协作目录结构。'
+          },
+          {
+            id: 'ADDON-2', stage: '脚手架与巡检', title: '初始化作业骨架与 7 节交接文档校验',
+            sub: 'scaffold-projects.ps1（默认不自动提交）+ check-handoff.ps1',
+            tier: 'B', actor: 'Agent 执行',
+            summary: '用 scaffold-projects.ps1 幂等补齐「工作文件 / 最终成品 / 工作记录 / 交接文档.md」，可选 -InitGit 独立建仓；用 check-handoff.ps1 批量校验 7 节正文与独立 Git 顶层路径。',
+            warn: '脚本不会自动 git add -A 或提交，同作业使用独立私有仓，审查后传递补丁。',
+            done: ['目标作业已具备三文件夹与合格的 7 节交接文档', 'check-handoff.ps1 返回合格'],
+            files: ['scripts/scaffold-projects.ps1', 'scripts/check-handoff.ps1', 'references/06-multi-agent-and-local-first.md'],
+            prompt: '请拟定私有仓脚手架和交接结构巡检步骤；结构通过不等于 Git 状态、提交历史或时效已核验。'
+          },
+          {
+            id: 'ADDON-3', stage: '本地优先管线', title: '大文件本地转 Markdown 再检索精读',
+            sub: '运行 to_md.py（防串档哈希键 + 原子清单），用 ripgrep 定位读取',
+            tier: 'B', actor: 'Agent 执行',
+            summary: '超过 10 MB 或 1000 页的 PDF/Office 文档先运行 scripts/to_md.py 本地转成轻量 Markdown（不保证压缩比），再按关键词行号精准读取命中段落。',
+            warn: '来源不明的文档应在无网低权限环境转换；转换产物仍是不可信输入，含敏感信息须先剔除。',
+            done: ['成功生成轻量 Markdown 与 manifest.jsonl', '二次运行命中缓存自动跳过未变更文件'],
+            files: ['scripts/to_md.py', 'references/06-multi-agent-and-local-first.md'],
+            prompt: '请拟定无网低权限的 B 档本地转换方案，说明依赖、输入输出边界及脱敏；不直接安装或转换。'
+          }
+        ]
+      },
+      T: {
+        id: 'T',
+        tab: '紧急排障与清理',
+        pill: '出问题先点这里',
+        maturity: '实战 SOP · 事故止损',
+        title: '紧急排障、事故时间线与 5 步可恢复清理',
+        desc: '遇到登录失败、403/429/529、VM 代理超时或账号受限时，先止损建时间线，绝不跨 IP 连续重试！',
+        steps: [
+          {
+            id: 'T-1', stage: '立即止损', title: '停止重试，建立统一时间戳「事故时间线」',
+            sub: '区分「事实 / 推断 / 未知」，收集报错原文、Request ID 与网络变动',
+            tier: 'A', actor: '共同确认',
+            summary: '按 07 手册模板整理报错时间、状态码（403/429/529 或 /restricted）、近期出口/配置变动，避免把单一错误武断归因于封号。',
+            warn: '在未确认账号状态前跨 ASN / 换浏览器疯狂重试，只会扩大污染面。',
+            done: ['已整理含时间戳的事故时间线', '明确区分已确认事实与待核查推断'],
+            files: ['references/07-troubleshooting-and-cleanup.md', 'references/05-account-payment-and-sop.md'],
+            prompt: '我使用 Claude 时遇到了异常，请按 claude-fortress 的紧急故障模式（references/07-troubleshooting-and-cleanup.md）帮我建立统一时间戳事故时间线并做客观分诊，先不要让我盲目重试。'
+          },
+          {
+            id: 'T-2', stage: '定位根因', title: '高频故障排查或单变量线路测量',
+            sub: '排查宿主机 TUN 冲突、网关缺失、DNS 独立证据或分段测延迟',
+            tier: 'B', actor: 'Agent 执行',
+            summary: '核对是否为宿主机 TUN 劫持 vmnat.exe、网关描述文件缺失或 DNS 独立证据超时；若为晚高峰卡顿，按「分段定位 → 同口径对比 → 每次只改一个变量」排查。',
+            warn: '任何路由或协议优化后必须重跑 S1 中性验收与负向防直连演练。',
+            done: ['定位真实瓶颈段或配置差异', '修复后复测通过且未破坏隔离边界'],
+            files: ['references/07-troubleshooting-and-cleanup.md', 'assets/host-clash-vmnat-bypass.yaml'],
+            prompt: '请按 claude-fortress 的 references/07-troubleshooting-and-cleanup.md 帮我排查当前网络超时/延迟异常，先做 A 档只读检查定位根因，再给最小修复方案。'
+          },
+          {
+            id: 'T-3', stage: '可恢复清理', title: '5 步可恢复本地数据隔离清理（可选）',
+            sub: '只读清单 → 私有备份 → 哈希核对 → C 档确认隔离 → 恢复核对',
+            tier: 'C', actor: '共同确认',
+            summary: '如需彻底清理旧环境残留，先完全退出 Claude，生成只读路径清单（单独确认是否移走历史对话），复制到私有备份并记录 SHA-256，获 C 档明确回复后再隔离移走。',
+            warn: '默认可恢复隔离，不直接永久删除；始终保护你的源码、Git 工作、settings.json、skills 与取证日志。',
+            done: ['私有备份与哈希清单已核对', '受保护目录完好无损，隔离完成'],
+            files: ['references/07-troubleshooting-and-cleanup.md'],
+            prompt: '我需要按 claude-fortress 的 5 步可恢复清理规范整理本机 Claude 残留。请先做第 1-2 步：确认进程已退出并输出只读清理清单，单独问我是否隔离历史对话，没有我的 C 档确认不要动任何文件。'
+          }
+        ]
+      }
+    };
+
+    const TIER_LABEL = {
+      A: 'A 档 · 纯只读',
+      B: 'B 档 · 可逆/中性探测',
+      C: 'C 档 · 高风险须确认'
+    };
+
+    let storageUsable = true;
+    function loadDone() {
+      const clean = Object.create(null);
+      try {
+        const value = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+        if (value && typeof value === 'object' && !Array.isArray(value)) {
+          for (const step of Object.values(ROUTES).flatMap(route => route.steps)) {
+            if (Object.prototype.hasOwnProperty.call(value, step.id) && value[step.id] === true) clean[step.id] = true;
+          }
+        }
+      } catch { storageUsable = false; }
+      return clean;
+    }
+    const state = { quiz: { goal: 'new', machine: 'vm', desktop: 'yes' }, routeId: 'B', stepId: 'B-1', done: loadDone() };
+    const byId = id => document.getElementById(id);
+    const promptSuffix = '\n\n这是准备请求，不是审批。只拟定检查或变更卡；不要联网、改配置、写文件、启动应用或代操作，等我另行同意。';
+
+    function saveDone() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state.done));
+        return storageUsable = true;
+      } catch { return storageUsable = false; }
+    }
+
+    function showToast(message) {
+      const toast = byId('toast');
+      toast.textContent = message;
+      toast.classList.add('show');
+      clearTimeout(window.__toastTimer);
+      window.__toastTimer = setTimeout(() => toast.classList.remove('show'), 2600);
+    }
+
+    function computeRecommendation() {
+      const { goal, machine, desktop } = state.quiz;
+      if (goal === 'trouble') return { id: 'T', reason: '先停止重试，收集脱敏事故证据。' };
+      if (goal === 'collab') return { id: 'ADDON', reason: '可独立使用，不需要代理或账号。' };
+      if (desktop === 'yes' && machine !== 'vm') return { id: null, reason: '桌面端需求与所选条件冲突。若不能使用适合的 Windows VM，请暂停；若可放弃桌面端，请重新选型。' };
+      if (machine === 'vps') return { id: 'C', reason: '仅远端 Linux CLI；先区分 C1/C2。' };
+      if (machine === 'whole') return { id: 'A2', reason: '本机整机防护是参考设计，先验证回滚。' };
+      if (machine === 'light') return { id: 'A1', reason: '应用层分流，不是整机防直连。' };
+      return { id: 'B', reason: '有条件尝试 VMware 隔离参考实现；先做离线盘点，不代表已验收。' };
+    }
+
+    function element(tag, text, className) {
+      const node = document.createElement(tag);
+      if (text) node.textContent = text;
+      if (className) node.className = className;
+      if (tag === 'button') node.type = 'button';
+      return node;
+    }
+
+    function renderQuizResult() {
+      const rec = computeRecommendation();
+      const box = byId('quizResult');
+      box.replaceChildren(element('div', rec.id ? ROUTES[rec.id].tab + ' — ' + rec.reason : rec.reason));
+      if (rec.id) {
+        const button = element('button','切换到推荐入口','btn primary');
+        button.onclick = () => selectRoute(rec.id);
+        box.appendChild(button);
+      }
+    }
+
+    function renderTabs() {
+      const container = byId('routeTabs');
+      container.replaceChildren();
+      for (const id of ['B','A1','A2','C','T','ADDON']) {
+        const route = ROUTES[id];
+        if (route.isAddon) container.appendChild(element('div','','tab-divider'));
+        const button = element('button', route.tab, 'tab' + (route.isAddon ? ' addon' : '') + (state.routeId === id ? ' active' : ''));
+        button.setAttribute('aria-pressed', String(state.routeId === id));
+        button.appendChild(element('span',route.pill,'mini-pill'));
+        button.onclick = () => selectRoute(id);
+        container.appendChild(button);
+      }
+    }
+
+    function selectRoute(id) {
+      state.routeId = id;
+      state.stepId = ROUTES[id].steps[0].id;
+      renderAll();
+    }
+
+    function badges(step) {
+      return [element('span',TIER_LABEL[step.tier],'badge tier-' + step.tier), element('span',step.actor,'badge actor')];
+    }
+
+    function renderFlow() {
+      const route = ROUTES[state.routeId];
+      byId('routeTitle').textContent = route.title;
+      byId('routeMaturity').textContent = route.maturity;
+      byId('routeDesc').textContent = route.desc;
+      const done = route.steps.filter(step => state.done[step.id] === true).length;
+      const pct = Math.round(done / route.steps.length * 100);
+      byId('progressText').textContent = '自记进度 ' + done + ' / ' + route.steps.length + '（不是通过证据）' + (storageUsable ? '' : ' · 仅当前页面');
+      byId('progressFill').style.width = pct + '%';
+      const list = byId('flowList');
+      list.replaceChildren();
+      route.steps.forEach((step,index) => {
+        if (index) list.appendChild(element('div','↓','flow-connector'));
+        const checked = state.done[step.id] === true;
+        const node = element('div','','node' + (state.stepId === step.id ? ' selected' : '') + (checked ? ' done' : ''));
+        const check = element('button', checked ? '✓' : '','node-check');
+        check.setAttribute('aria-label','切换自记进度：' + step.title);
+        check.setAttribute('aria-pressed', String(checked));
+        check.onclick = () => toggleDone(step.id);
+        const label = element('div');
+        const name = element('button',step.stage + ' · ' + step.title,'btn node-title');
+        name.onclick = () => { state.stepId = step.id; renderFlow(); renderDetail(); };
+        label.append(name, element('div',step.sub,'node-sub'));
+        const group = element('div','','badges');
+        group.append(...badges(step));
+        node.append(check,label,group);
+        list.appendChild(node);
+      });
+    }
+
+    function renderDetail() {
+      const route = ROUTES[state.routeId];
+      const step = route.steps.find(entry => entry.id === state.stepId) || route.steps[0];
+      byId('dTitle').textContent = step.stage + ' · ' + step.title;
+      byId('dBadges').replaceChildren(...badges(step));
+      byId('dSummary').textContent = step.summary;
+      byId('dWarnWrap').style.display = step.warn ? 'block' : 'none';
+      byId('dWarn').textContent = step.warn || '';
+      byId('dDoneList').replaceChildren(...step.done.map(item => element('li',item)));
+      byId('dFiles').replaceChildren(...step.files.map(file => {
+        const anchor = element('a',file,'chip');
+        if (/^(?:[A-Z]+\.md|(?:references|scripts|assets)\/[a-zA-Z0-9._-]+)$/.test(file) && !file.includes('..')) anchor.href = '../' + file;
+        return anchor;
+      }));
+      const prompt = step.prompt + promptSuffix;
+      byId('dPrompt').textContent = prompt;
+      byId('btnToggleDone').textContent = state.done[step.id] === true ? '撤回自记标记' : '做个自记标记';
+      byId('btnToggleDone').onclick = () => toggleDone(step.id);
+      byId('btnCopyPrompt').onclick = () => copyText(prompt);
+    }
+
+    function toggleDone(id) {
+      if (state.done[id] === true) delete state.done[id];
+      else state.done[id] = true;
+      if (!saveDone()) showToast('无法保存，仅在本页面保留标记。');
+      renderFlow();
+      renderDetail();
+    }
+
+    async function copyText(text) {
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(text);
+          showToast('已复制。复制不是批准。');
+          return true;
+        }
+      } catch { }
+      const field = element('textarea');
+      field.value = text;
+      field.style.position = 'fixed';
+      field.style.opacity = '0';
+      document.body.appendChild(field);
+      let copied = false;
+      try { field.select(); copied = document.execCommand('copy') === true; }
+      catch { copied = false; }
+      finally { field.remove(); }
+      showToast(copied ? '已复制。复制不是批准。' : '未能自动复制；请手动选中可见的指令文字。');
+      return copied;
+    }
+
+    function renderAll() {
+      renderQuizResult();
+      renderTabs();
+      renderFlow();
+      renderDetail();
+    }
+
+    document.querySelectorAll('.opt-list').forEach(list => {
+      const question = list.getAttribute('data-q');
+      list.querySelectorAll('.opt-btn').forEach(button => {
+        button.onclick = () => {
+          list.querySelectorAll('.opt-btn').forEach(other => other.classList.remove('active'));
+          button.classList.add('active');
+          state.quiz[question] = button.getAttribute('data-val');
+          renderQuizResult();
+        };
+      });
+    });
+    let quizOpen = true;
+    byId('quizToggle').onclick = () => {
+      quizOpen = !quizOpen;
+      byId('quizBody').style.display = quizOpen ? 'block' : 'none';
+      byId('quizToggleText').textContent = quizOpen ? '收起 ▲' : '展开 ▼';
+    };
+    const modal = byId('beginnerModal');
+    byId('btnBeginner').onclick = () => modal.classList.add('open');
+    byId('btnCloseModal').onclick = () => modal.classList.remove('open');
+    modal.onclick = event => { if (event.target === modal) modal.classList.remove('open'); };
+    byId('btnReset').onclick = () => {
+      state.done = Object.create(null);
+      const persisted = saveDone();
+      renderAll();
+      showToast(persisted ? '已重置本地自记进度。' : '仅清除当前页面进度；浏览器未能保存重置。');
+    };
+    renderAll();
+  </script>
+</body>
+</html>

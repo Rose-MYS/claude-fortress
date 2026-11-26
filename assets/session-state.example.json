@@ -1,0 +1,33 @@
+{
+  "schema_version": 2,
+  "updated_utc": null,
+  "route": "B",
+  "target_alias": "guest-example",
+  "stage": "offline_inventory",
+  "generation": "example-not-deployed",
+  "facts": {
+    "host_os": "unknown",
+    "guest_os": "unknown",
+    "isolation_mode": "unknown"
+  },
+  "evidence": {
+    "offline_inventory": {
+      "status": "not_run",
+      "source_ref": null,
+      "captured_utc": null,
+      "valid_until_utc": null,
+      "config_sha256": null
+    },
+    "boundary_validation": {
+      "status": "not_run",
+      "source_ref": null,
+      "captured_utc": null,
+      "valid_until_utc": null,
+      "config_sha256": null
+    }
+  },
+  "pending_decisions": [
+    "先完成 A 档离线摘要；如需落盘或探测，分别申请 B 档。"
+  ],
+  "notes": "仅脱敏状态；不是运行时证据，不保存或复用批准。"
+}

@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Claude Fortress · Interactive Route Guide &amp; Beginner Agent Handbook</title>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --bg-elev: #121a30;
+      --bg-card: #16203a;
+      --bg-hover: #1d2a4d;
+      --border: #26355c;
+      --border-strong: #3c5490;
+      --text: #eaf0ff;
+      --text-muted: #98a8cc;
+      --text-dim: #6f81aa;
+      --accent: #60a5fa;
+      --accent-soft: rgba(96, 165, 250, 0.14);
+      --tier-a: #34d399;
+      --tier-a-bg: rgba(52, 211, 153, 0.14);
+      --tier-b: #60a5fa;
+      --tier-b-bg: rgba(96, 165, 250, 0.14);
+      --tier-c: #f87171;
+      --tier-c-bg: rgba(248, 113, 113, 0.16);
+      --warn: #fbbf24;
+      --warn-bg: rgba(251, 191, 36, 0.14);
+      --radius: 14px;
+      --shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+    }
+
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: radial-gradient(circle at top right, #18254a 0%, var(--bg) 52%);
+      color: var(--text);
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.55;
+      min-height: 100vh;
+    }
+
+    .wrap { max-width: 1320px; margin: 0 auto; padding: 20px 20px 56px; }
+    .topbar {
+      display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px;
+      padding: 18px 22px; background: rgba(18, 26, 48, 0.88); border: 1px solid var(--border);
+      border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 18px;
+    }
+    .brand h1 { margin: 0; font-size: 20px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+    .brand .tag {
+      font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 999px;
+      background: var(--tier-a-bg); color: var(--tier-a); border: 1px solid rgba(52, 211, 153, 0.35);
+    }
+    .brand p { margin: 4px 0 0; font-size: 13px; color: var(--text-muted); }
+    .top-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+    .btn {
+      appearance: none; border: 1px solid var(--border-strong); background: var(--bg-card);
+      color: var(--text); padding: 8px 14px; border-radius: 10px; font-size: 13px; font-weight: 600;
+      cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; transition: all 0.16s ease;
+    }
+    .btn:hover { background: var(--bg-hover); transform: translateY(-1px); }
+    .btn.primary { background: linear-gradient(135deg, #2563eb, #3b82f6); border-color: #60a5fa; color: #fff; }
+    .btn.primary:hover { filter: brightness(1.08); }
+    .btn.danger { border-color: rgba(248, 113, 113, 0.45); color: #fca5a5; }
+
+    .quiz-panel {
+      background: var(--bg-elev); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 18px 22px; margin-bottom: 18px;
+    }
+    .quiz-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; cursor: pointer; }
+    .quiz-header h2 { margin: 0; font-size: 15px; }
+    .quiz-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 14px; }
+    .quiz-q { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; }
+    .quiz-q label.q-title { display: block; font-size: 13px; font-weight: 600; margin-bottom: 10px; }
+    .opt-list { display: flex; flex-direction: column; gap: 7px; }
+    .opt-btn {
+      text-align: left; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border);
+      background: rgba(11, 16, 32, 0.55); color: var(--text-muted); font-size: 12.5px; cursor: pointer;
+    }
+    .opt-btn:hover { border-color: var(--border-strong); color: var(--text); }
+    .opt-btn.active { background: var(--accent-soft); border-color: var(--accent); color: #fff; font-weight: 600; }
+    .quiz-result {
+      margin-top: 14px; padding: 12px 16px; border-radius: 10px; background: rgba(52, 211, 153, 0.1);
+      border: 1px solid rgba(52, 211, 153, 0.35); display: flex; flex-wrap: wrap;
+      align-items: center; justify-content: space-between; gap: 10px; font-size: 13px;
+    }
+
+    .tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+    .tab {
+      padding: 9px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg-elev);
+      color: var(--text-muted); font-size: 13px; font-weight: 600; cursor: pointer;
+      display: inline-flex; align-items: center; gap: 7px;
+    }
+    .tab:hover { border-color: var(--border-strong); color: var(--text); }
+    .tab.active { background: var(--accent-soft); border-color: var(--accent); color: #fff; }
+    .tab .mini-pill { font-size: 11px; padding: 1px 6px; border-radius: 999px; background: rgba(255,255,255,0.08); color: var(--text-muted); }
+    .tab.active .mini-pill { background: rgba(96, 165, 250, 0.28); color: #dbeafe; }
+    .tab-divider { width: 1px; background: var(--border-strong); margin: 4px 4px; align-self: stretch; }
+    .tab.addon { border-style: dashed; border-color: rgba(251, 191, 36, 0.45); color: #fde68a; }
+    .tab.addon.active { border-style: solid; border-color: var(--warn); background: var(--warn-bg); color: #fef3c7; }
+
+    .main-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(340px, 0.85fr); gap: 18px; align-items: start; }
+    .route-card { background: var(--bg-elev); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; }
+    .route-meta { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+    .route-meta h2 { margin: 0; font-size: 17px; }
+    .route-desc { margin: 0 0 14px; font-size: 13px; color: var(--text-muted); }
+    .progress-bar-wrap { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; font-size: 12.5px; color: var(--text-muted); }
+    .progress-track { flex: 1; height: 8px; border-radius: 999px; background: rgba(255,255,255,0.08); overflow: hidden; }
+    .progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--tier-a), var(--accent)); transition: width 0.25s ease; }
+
+    .flow-list { display: flex; flex-direction: column; }
+    .flow-connector { display: flex; justify-content: center; height: 22px; color: var(--border-strong); font-size: 15px; line-height: 22px; user-select: none; }
+    .node {
+      display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; gap: 12px; align-items: center;
+      padding: 13px 15px; border-radius: 12px; background: var(--bg-card); border: 1px solid var(--border);
+    }
+    .node:hover { background: var(--bg-hover); border-color: var(--border-strong); }
+    .node.selected { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.25); background: #1b284b; }
+    .node.done { border-color: rgba(52, 211, 153, 0.45); }
+    .node-check {
+      width: 22px; height: 22px; border-radius: 6px; border: 1.5px solid var(--border-strong);
+      background: rgba(11, 16, 32, 0.7); color: #0b1020; display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 13px; cursor: pointer;
+    }
+    .node.done .node-check { background: var(--tier-a); border-color: var(--tier-a); }
+    .node-title { font-size: 13.5px; font-weight: 650; text-align: left; padding: 4px 8px; }
+    .node-sub { font-size: 12.5px; color: var(--text-muted); margin-top: 4px; }
+    .badges { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
+    .badge { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+    .badge.tier-A { background: var(--tier-a-bg); color: var(--tier-a); border: 1px solid rgba(52, 211, 153, 0.35); }
+    .badge.tier-B { background: var(--tier-b-bg); color: var(--tier-b); border: 1px solid rgba(96, 165, 250, 0.35); }
+    .badge.tier-C { background: var(--tier-c-bg); color: var(--tier-c); border: 1px solid rgba(248, 113, 113, 0.4); }
+    .badge.actor { background: rgba(255,255,255,0.07); color: var(--text-muted); border: 1px solid var(--border); }
+
+    .drawer {
+      position: sticky; top: 16px; background: var(--bg-elev); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow);
+    }
+    .drawer-head {
+      display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px;
+      padding-bottom: 12px; border-bottom: 1px solid var(--border); margin-bottom: 14px;
+    }
+    .drawer-head h3 { margin: 0; font-size: 16px; }
+    .detail-sec { margin-bottom: 14px; }
+    .detail-sec h4 { margin: 0 0 6px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-dim); }
+    .detail-sec p, .detail-sec ul { margin: 0; font-size: 13.5px; color: var(--text); }
+    .detail-sec ul { padding-left: 18px; }
+    .detail-sec li { margin-bottom: 4px; }
+    .warn-box {
+      background: var(--warn-bg); border: 1px solid rgba(251, 191, 36, 0.38);
+      color: #fde68a; border-radius: 10px; padding: 10px 12px; font-size: 12.8px;
+    }
+    .file-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .chip {
+      font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 12px; padding: 4px 8px;
+      border-radius: 7px; background: rgba(11, 16, 32, 0.8); border: 1px solid var(--border);
+      color: #bfdbfe; text-decoration: none;
+    }
+    .chip:hover { border-color: var(--accent); color: #fff; }
+    .prompt-box {
+      background: #090e1c; border: 1px solid var(--border-strong); border-radius: 10px; padding: 12px;
+      font-size: 13px; color: #dbeafe; white-space: pre-wrap; word-break: break-word; margin-bottom: 10px;
+    }
+    .drawer-footer { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+
+    .modal-backdrop {
+      position: fixed; inset: 0; background: rgba(5, 8, 18, 0.72); display: none;
+      align-items: center; justify-content: center; padding: 18px; z-index: 50;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal {
+      max-width: 720px; width: 100%; background: var(--bg-elev); border: 1px solid var(--border-strong);
+      border-radius: 16px; padding: 22px; box-shadow: var(--shadow); max-height: 88vh; overflow-y: auto;
+    }
+    .modal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+    .modal-head h3 { margin: 0; font-size: 17px; }
+    .guide-cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .guide-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 14px; }
+    .guide-card h4 { margin: 0 0 6px; font-size: 14px; color: var(--accent); }
+    .guide-card p { margin: 0; font-size: 13px; color: var(--text-muted); }
+
+    .toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
+      background: #10b981; color: #052e16; font-weight: 700; font-size: 13px; padding: 10px 18px;
+      border-radius: 999px; box-shadow: var(--shadow); opacity: 0; pointer-events: none; transition: all 0.2s ease; z-index: 60;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    @media (max-width: 960px) {
+      .quiz-grid, .main-grid, .guide-cards { grid-template-columns: 1fr; }
+      .drawer { position: static; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="topbar">
+      <div class="brand">
+        <h1>
+          Claude Fortress Interactive Route Guide
+          <span class="tag">Self-Contained · Offline When Local · v1.2</span>
+        </h1>
+        <p>Pick a route → inspect Tier A/B/C boundaries &amp; mandatory local self-checks → copy preparation prompts for your Agent. (Copying is not approval; checkboxes are personal notes only.)</p>
+      </div>
+      <div class="top-actions">
+        <a class="btn" href="interactive-guide.html">简体中文</a>
+        <button class="btn primary" id="btnBeginner">Beginner Agent Guide</button>
+        <button class="btn danger" id="btnReset">Reset Local Notes</button>
+      </div>
+    </header>
+
+    <section class="quiz-panel">
+      <div class="quiz-header" id="quizToggle">
+        <h2>30-Second Route Selector (Answer 3 quick questions to match a route)</h2>
+        <span style="font-size:12px;color:var(--text-muted);" id="quizToggleText">Collapse ▲</span>
+      </div>
+      <div id="quizBody">
+        <div class="quiz-grid">
+          <div class="quiz-q">
+            <label class="q-title">1. What is your current goal?</label>
+            <div class="opt-list" data-q="goal">
+              <button class="opt-btn active" data-val="new">Set up an isolated Claude environment from scratch</button>
+              <button class="opt-btn" data-val="trouble">Already hit login errors, timeouts, or restriction (triage first)</button>
+            </div>
+          </div>
+          <div class="quiz-q">
+            <label class="q-title">2. Your hardware &amp; preference?</label>
+            <div class="opt-list" data-q="machine">
+              <button class="opt-btn active" data-val="vm">Windows ≥16 GB RAM, highest isolation priority</button>
+              <button class="opt-btn" data-val="light">Tight RAM / no VM, lightweight setup</button>
+              <button class="opt-btn" data-val="whole">Dedicated machine routing all traffic via one fixed egress</button>
+              <button class="opt-btn" data-val="vps">Clean Linux VPS, terminal-only workflow</button>
+            </div>
+          </div>
+          <div class="quiz-q">
+            <label class="q-title">3. Do you need the Claude Desktop app?</label>
+            <div class="opt-list" data-q="desktop">
+              <button class="opt-btn active" data-val="yes">Yes (Desktop + CLI)</button>
+              <button class="opt-btn" data-val="no">No (Web + Claude Code CLI only)</button>
+            </div>
+          </div>
+        </div>
+        <div class="quiz-result" id="quizResult"></div>
+      </div>
+    </section>
+
+    <nav class="tabs" id="routeTabs"></nav>
+
+    <main class="main-grid">
+      <section class="route-card">
+        <div class="route-meta">
+          <h2 id="routeTitle"></h2>
+          <span class="badge actor" id="routeMaturity"></span>
+        </div>
+        <p class="route-desc" id="routeDesc"></p>
+        <div class="progress-bar-wrap">
+          <span id="progressText">Notes 0 / 0</span>
+          <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+        </div>
+        <div class="flow-list" id="flowList"></div>
+      </section>
+
+      <aside class="drawer" id="detailDrawer">
+        <div class="drawer-head">
+          <h3 id="dTitle">Select any step on the left</h3>
+          <div style="display:flex;gap:6px;" id="dBadges"></div>
+        </div>
+        <div class="detail-sec">
+          <h4>What This Step Does</h4>
+          <p id="dSummary"></p>
+        </div>
+        <div class="detail-sec" id="dWarnWrap" style="display:none;">
+          <h4>Red Lines &amp; Caveats</h4>
+          <div class="warn-box" id="dWarn"></div>
+        </div>
+        <div class="detail-sec">
+          <h4>Completion Criteria</h4>
+          <ul id="dDoneList"></ul>
+        </div>
+        <div class="detail-sec">
+          <h4>Related Playbooks &amp; Scripts</h4>
+          <div class="file-chips" id="dFiles"></div>
+        </div>
+        <div class="detail-sec">
+          <h4>Copy Preparation Request for Your Agent</h4>
+          <div class="prompt-box" id="dPrompt"></div>
+          <div class="drawer-footer">
+            <button class="btn primary" id="btnCopyPrompt">Copy Prompt for Agent</button>
+            <button class="btn" id="btnToggleDone">Toggle Personal Note</button>
+          </div>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <div class="modal-backdrop" id="beginnerModal">
+    <div class="modal">
+      <div class="modal-head">
+        <h3>1-Minute Beginner Guide to Working With Your Agent</h3>
+        <button class="btn" id="btnCloseModal">Close</button>
+      </div>
+      <div class="guide-cards">
+        <div class="guide-card">
+          <h4>1. Install Only the Skill Folder</h4>
+          <p>Copy only <code>claude-fortress/</code> to your host's skills folder: Claude Code uses <code>~/.claude/skills/</code> (or project <code>.claude/skills/</code>); generic hosts use <code>~/.agents/skills/</code>.</p>
+        </div>
+        <div class="guide-card">
+          <h4>2. Copy Prompts — No Commands to Memorize</h4>
+          <p>Select a route, click Step 1, copy the preparation prompt, and paste it to your Agent. The Agent reports in 3 short parts: <code>Confirmed / Not Checked / Next Step</code>.</p>
+        </div>
+        <div class="guide-card">
+          <h4>3. Read Tier A / B / C Badges</h4>
+          <p><strong style="color:var(--tier-a)">Tier A (Green)</strong> offline read-only; <strong style="color:var(--tier-b)">Tier B (Blue)</strong> reversible local writes or neutral probes; <strong style="color:var(--tier-c)">Tier C (Red)</strong> firewalls, disconnects, cleanup, or touching Claude — Agent must pause for your explicit yes.</p>
+        </div>
+        <div class="guide-card">
+          <h4>4. Privacy &amp; Self-Verify Rules</h4>
+          <p>Never commit passwords, tokens, private keys, or personal names/handles. Always self-verify cold boot, warm reboot, and fail-closed blocks on your own machine before attaching a real account.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast">Copied!</div>
+
+  <script>
+    const STORAGE_KEY = 'claude_fortress_guide_done_en_v1';
+
+    const ROUTES = {
+      B: {
+        id: 'B',
+        tab: 'Route B: VM + OpenWrt Fortress',
+        pill: 'Flagship',
+        maturity: 'Parameterized Reference · Self-Verify Cold/Warm Boot Locally',
+        title: 'Route B: Windows VM + Dedicated OpenWrt Default-Deny Gateway',
+        desc: 'Out-of-guest OpenWrt default-deny gateway + in-guest Windows GPO firewall. Templates do not vouch for your hardware — personally verify cold boot, warm reboot/reload, and entry-block drills on your own machine before attaching any real account.',
+        steps: [
+          {
+            id: 'B-1', stage: 'S0 Offline Inventory', title: 'Host Read-Only Check',
+            sub: 'Verify RAM, disk, VMware Workstation, NICs & VMnet8 with zero network calls',
+            tier: 'A', actor: 'Agent',
+            summary: 'Agent performs an offline read-only check of host OS build, available RAM/disk, VMware Workstation, network adapters, and active proxy processes.',
+            warn: 'Strict PC0 stage: zero external probes and zero contact with Claude/Anthropic endpoints.',
+            done: ['Confirm host >=16 GB RAM and >=80 GB free disk', 'Confirm VMware Workstation and VMnet8 subnet status', 'Output desensitized summary in chat'],
+            files: ['SKILL.md', 'references/en/01-route-selection-and-preflight.md', 'assets/session-state.example.json'],
+            prompt: 'Using claude-fortress S0 (Route B), run a Tier-A offline read-only inventory of my host (OS, RAM/disk, VMware Workstation, NICs, proxy processes) and report Confirmed / Not Checked / Next Step.'
+          },
+          {
+            id: 'B-2', stage: 'Build 1/4', title: 'Build Isolated LAN Segment & OpenWrt Gateway First',
+            sub: 'Close the gate before attaching the guest; use the dedicated persistent init loader',
+            tier: 'C', actor: 'Confirm Together',
+            summary: 'Create a dedicated VMware LAN Segment and deploy a dedicated OpenWrt VM. Install the zero-forwarding sysctl baseline, dedicated init loader, and nftables template with input/output/forward default-deny and named counters.',
+            warn: 'Never apply this template to a shared router or mix with fw4; keep an out-of-band serial console.',
+            done: ['Verify nft -c syntax and zero-forwarding on failure/reboot', 'Disable IPv6 forwarding and gateway DNS forwarding', 'Back up gateway descriptors and sysctl'],
+            files: ['references/en/03-route-b-vm-openwrt-fortress.md', 'assets/openwrt-vm-gateway.nft.tmpl', 'assets/openwrt-claude-fortress.init', 'assets/openwrt-claude-fortress.sysctl.conf'],
+            prompt: 'Prepare a Tier-C confirmation card and placeholder checklist for claude-fortress Route B Stage 1 (VMware LAN Segment + dedicated OpenWrt persistent nftables gateway).'
+          },
+          {
+            id: 'B-3', stage: 'Build 2/4', title: 'Prepare Offline Windows Guest & GPO Whitelist',
+            sub: 'Single NIC on isolated segment + 3-profile default-block GPO + Guard',
+            tier: 'C', actor: 'Confirm Together',
+            summary: 'Build a single-NIC Windows 11 guest on the isolated segment using verified offline media, configure 3-profile default-block GPO with the 6 exact CG-Managed-* rules, and deploy protected scripts under %ProgramData%\\ClaudeFortress.',
+            warn: 'Never attach an authenticated guest to ordinary NAT; preserve required DHCP broadcast 255.255.255.255.',
+            done: ['Single guest NIC on isolated segment verified', 'Protected ACLs and private config JSON verified', 'guest-egress-guard.ps1 -Status passes'],
+            files: ['references/en/03-route-b-vm-openwrt-fortress.md', 'references/en/route-b-windows-operations.md', 'assets/route-b-config.example.json', 'scripts/guest-egress-guard.ps1'],
+            prompt: 'Prepare a Tier-C confirmation card for claude-fortress Route B Stage 2 (offline Windows guest, GPO CG-Managed-* rules, protected ACLs, and private config placeholders).'
+          },
+          {
+            id: 'B-4', stage: 'Build 3/4', title: 'Host Clash TUN Exception (Audit Impact First)',
+            sub: 'Only if host runs Clash TUN — prepend vmnat.exe without MATCH',
+            tier: 'C', actor: 'Confirm Together',
+            summary: 'If your host runs Clash TUN, check whether any other NAT guests depend on host TUN before prepending the MATCH-free vmnat.exe exception in rule mode.',
+            warn: 'Never prepend MATCH; rules on vmnat.exe affect every VMware NAT guest on the host.',
+            done: ['Audited other NAT guests and merged ruleset', 'Host routing and VM latency verified across TUN and system proxy'],
+            files: ['assets/host-clash-vmnat-bypass.yaml', 'references/en/07-troubleshooting-and-cleanup.md'],
+            prompt: 'Draft an impact assessment and Tier-C change card for the host Clash TUN vmnat.exe exception (no MATCH), including impact on other NAT guests and rollback.'
+          },
+          {
+            id: 'B-5', stage: 'S1 Mandatory Self-Check', title: 'Neutral Probe + Cold/Warm Boot & Negative Drill',
+            sub: 'Tier-B neutral probe; Tier-C cold boot, warm reboot/reload & entry-block drill',
+            tier: 'C', actor: 'Tiered Confirm',
+            summary: 'Personally verify on your own machine before attaching any real account: (1) neutral IPv4 probe; (2) full power-off cold boot check; (3) gateway reboot / reload failure / host TUN toggle / sleep-resume warm check with brand-new SSH; (4) time-limited gateway entry block.',
+            warn: 'Zero Claude contact in S1; never stop clash_verge_service to test disconnect; do not attach a real account until all local self-checks pass.',
+            done: ['Dual-path neutral probe + independent DNS/IPv6/WebRTC evidence recorded', 'Cold boot and warm reboot/reload show zero WAN leaks and new SSH works', 'Time-limited entry block cuts both paths cleanly and recovers on expiry'],
+            files: ['references/en/01-route-selection-and-preflight.md', 'assets/route-b-evidence.example.json', 'scripts/claude-env-check.ps1'],
+            prompt: 'Draft separate Tier-B neutral probe cards and a Tier-C local self-verification plan covering cold boot, warm reboot/reload, time-limited entry block, WAN evidence, and brand-new SSH verification.'
+          },
+          {
+            id: 'B-6', stage: 'S2-S4 Go-Live', title: 'Local Anti-Mislaunch Helper & User Login',
+            sub: 'Live interactive Tier-C confirmation on guest desktop; no auto-launch task',
+            tier: 'C', actor: 'User Only',
+            summary: 'Once all applicable S1 evidence items are pass, the designated non-admin desktop user runs guest-claude-gate.ps1 locally with live interactive confirmation, then completes login/billing directly on official pages.',
+            warn: 'Login, billing, and appeals are strictly user-only; this script is a local anti-mislaunch helper, not a mandatory OS gate.',
+            done: ['Helper validates identity, hashes, and TTL then requests activation', 'User completes login/billing directly on official pages'],
+            files: ['scripts/guest-claude-gate.ps1', 'references/en/route-b-windows-operations.md', 'references/en/05-account-payment-and-sop.md'],
+            prompt: 'Audit existing S1 evidence without assuming pass; if all applicable checks pass, draft a Tier-C confirmation card for S2 first contact (do not deploy auto-launch tasks).'
+          }
+        ]
+      },
+      A1: {
+        id: 'A1',
+        tab: 'Route A1: Fingerprint Browser + CLI',
+        pill: 'Lightweight',
+        maturity: 'Template · App-Level Separation (Not Fail-Closed)',
+        title: 'Route A1: Dedicated Fingerprint Browser + Clean CLI Subprocess',
+        desc: 'Zero VM overhead for Web + Claude Code CLI only: per-node isolated browser profiles with auto-matched locale/timezone/DNS, plus a clean CLI launcher. Not OS Fail-Closed; do not install bare-metal Claude Desktop on the host.',
+        steps: [
+          {
+            id: 'A1-1', stage: 'S0 Offline Inventory', title: 'Confirm Boundaries & Local HTTP/Mixed Proxy Port',
+            sub: 'Verify HTTP/mixed local port (CLI does not accept raw SOCKS) with zero network calls',
+            tier: 'A', actor: 'Agent',
+            summary: 'Inspect OS, local proxy HTTP/mixed listener port, and inherited shell env vars offline.',
+            warn: 'A1 is app-level separation only (not OS Fail-Closed); avoid bare-metal Claude Desktop on the host.',
+            done: ['Confirmed local HTTP/mixed proxy port', 'Confirmed Web + CLI only scope'],
+            files: ['references/en/01-route-selection-and-preflight.md', 'references/en/02-route-a-local-and-fingerprint.md'],
+            prompt: 'Using claude-fortress Route A1 S0, run an offline read-only inventory of my local HTTP/mixed proxy ports and shell proxy environment variables.'
+          },
+          {
+            id: 'A1-2', stage: 'Web Isolation', title: 'Per-Node Isolated Fingerprint Browser (Auto-Match)',
+            sub: 'One user-data-dir per node; auto-align locale, timezone & remote DNS',
+            tier: 'B', actor: 'Confirm Together',
+            summary: 'Set up an isolated fingerprint browser profile (Author tip: prefer GPT / Codex when building early browser/proxy wrappers). Isolate cookies per node, auto-align locale/timezone/remote DNS, and disable direct fallback.',
+            warn: 'Refuse to launch if probe fails or egress drifts; never silently fall back to direct egress.',
+            done: ['Dedicated profile isolated from daily browser', 'WebRTC disabled/proxied, remote DNS enabled, direct fallback off'],
+            files: ['references/en/02-route-a-local-and-fingerprint.md'],
+            prompt: 'Walk me through the Route A1 per-node fingerprint browser checklist from references/en/02-route-a-local-and-fingerprint.md and highlight common leak points.'
+          },
+          {
+            id: 'A1-3', stage: 'CLI Prep', title: 'Separate Neutral Preflight & Clean Subprocess Launcher',
+            sub: 'Strip inherited proxy/API env vars; never auto-chain S1 into S2 launch',
+            tier: 'B', actor: 'Confirm Together',
+            summary: 'Prepare the S1 neutral dual-endpoint IPv4 probe script (using no-proxy.invalid on PowerShell 5.1) and a separate S2/S3 clean-environment launcher stripping ANTHROPIC_API_KEY and inherited proxy vars.',
+            warn: 'Do not chain S1 exit 0 directly into automatic Claude launch; verify mismatch rejection locally.',
+            done: ['S1 probe script and separate S2/S3 launcher drafted', 'Mismatch test cleanly aborts'],
+            files: ['references/en/02-route-a-local-and-fingerprint.md'],
+            prompt: 'Draft the separate S1 neutral check and S2/S3 clean-subprocess launcher templates for my OS based on references/en/02-route-a-local-and-fingerprint.md.'
+          },
+          {
+            id: 'A1-4', stage: 'S1-S4 Go-Live', title: 'Neutral Verification & User Login',
+            sub: 'Verify browser + CLI neutral evidence before opening official pages',
+            tier: 'C', actor: 'User Only',
+            summary: 'Confirm neutral IPv4, DNS, and browser WebRTC checks pass, then review Tier-C card and log in directly on official pages.',
+            warn: 'Upgrade to Route B if you later need Claude Desktop or OS-level Fail-Closed guarantees.',
+            done: ['Neutral checks passed in both browser and CLI', 'User completed official login'],
+            files: ['references/en/01-route-selection-and-preflight.md', 'references/en/05-account-payment-and-sop.md'],
+            prompt: 'Audit my Route A1 S1 neutral evidence and, if complete, draft a Tier-C confirmation card for S2 first contact.'
+          }
+        ]
+      },
+      A2: {
+        id: 'A2',
+        tab: 'Route A2: Whole-Machine',
+        pill: 'Reference',
+        maturity: 'Cross-Platform Reference Design · Self-Verify Locally',
+        title: 'Route A2: Whole-Machine TUN (IPv4-Only) + OS Outbound Firewall',
+        desc: 'For a dedicated host routing all apps through one fixed egress. Requires TUN + IPv6 disabled + OS outbound default-deny firewall plus negative disconnect & sleep/resume tests.',
+        steps: [
+          {
+            id: 'A2-1', stage: 'S0 Offline Inventory', title: 'Audit Platform Firewall & Recovery Path',
+            sub: 'Map Windows GPO / macOS pf anchor / Linux nftables & local LAN exceptions',
+            tier: 'A', actor: 'Agent',
+            summary: 'Inspect OS version, existing firewall rules, LAN/VPN dependencies, and rollback mechanism offline.',
+            warn: 'Clash TUN or Global mode alone does NOT block direct fallback on proxy crash.',
+            done: ['Platform firewall mechanism identified', 'Rollback and required local exceptions listed'],
+            files: ['references/en/01-route-selection-and-preflight.md', 'references/en/02-route-a-local-and-fingerprint.md'],
+            prompt: 'Run a Tier-A offline inventory for claude-fortress Route A2 on my OS and outline firewall options, risks, and rollback steps.'
+          },
+          {
+            id: 'A2-2', stage: 'Hardening', title: 'Apply IPv4-Only + OS Outbound Default-Deny',
+            sub: 'Save standalone rollback script before enabling default-block',
+            tier: 'C', actor: 'Confirm Together',
+            summary: 'Disable IPv6 and configure OS outbound default-deny allowing only trusted proxy binary, TUN, loopback /8, and exact DHCP/LAN exceptions.',
+            warn: 'Verify independent local rollback before altering the active machine firewall.',
+            done: ['Standalone rollback saved', 'Default-block outbound policy active'],
+            files: ['references/en/02-route-a-local-and-fingerprint.md', 'scripts/guest-egress-guard.ps1'],
+            prompt: 'Draft a Tier-C confirmation card for Route A2 OS outbound default-deny and IPv4-only hardening with explicit rollback commands.'
+          },
+          {
+            id: 'A2-3', stage: 'S1 Self-Check', title: 'Cold/Warm Reboot, Sleep-Resume & Entry-Block Drill',
+            sub: 'Prove zero fallback to direct egress across network switches and restarts',
+            tier: 'C', actor: 'Tiered Confirm',
+            summary: 'Run neutral IP/DNS/IPv6 checks plus negative tests across reboot, Wi-Fi switch, sleep/resume, and entry block.',
+            warn: 'Never mark whole-machine protection passing without negative disconnect tests.',
+            done: ['Positive neutral checks pass', 'Negative disconnect, reboot, and sleep/resume show zero direct leak'],
+            files: ['references/en/01-route-selection-and-preflight.md', 'references/en/02-route-a-local-and-fingerprint.md'],
+            prompt: 'Draft the S1 neutral and negative self-verification checklist (reboot, sleep/resume, entry block) for Route A2.'
+          }
+        ]
+      },
+      C: {
+        id: 'C',
+        tab: 'Route C: Linux VPS Devbox',
+        pill: 'Reference',
+        maturity: 'Reference Design · C1 Native vs C2 Proxy Default-Deny',
+        title: 'Route C: Remote Linux VPS Devbox (CLI Only)',
+        desc: 'Separate C1 (clean native ISP egress) from C2 (compute VPS + outbound default-deny via residential proxy). Always verify provider VNC/Web Console and timed rollback before touching nftables.',
+        steps: [
+          {
+            id: 'C-1', stage: 'S0 Mode & Console', title: 'Pick C1 vs C2 & Verify Out-of-Band Console',
+            sub: 'Confirm provider VNC/Web Console works before any firewall edit',
+            tier: 'A', actor: 'Confirm Together',
+            summary: 'Determine whether your VPS qualifies for C1 (native clean ISP) or requires C2 (outbound default-deny + proxy), and confirm out-of-band console access.',
+            warn: 'Do not use a bare datacenter IP as C1; if referencing community GUI tools like safe-code, audit egress purity and avoid subscription-to-API gateway relays or reverse-SSH host shell access.',
+            done: ['Explicit C1 or C2 contract selected', 'Provider VNC/Web Console verified'],
+            files: ['references/en/04-route-c-vps-devbox.md'],
+            prompt: 'Using references/en/04-route-c-vps-devbox.md, help me decide between Mode C1 and C2 for my VPS and list anti-lockout prechecks.'
+          },
+          {
+            id: 'C-2', stage: 'Hardening', title: 'SSH Hardening & Timed-Rollback Firewall',
+            sub: 'Arm timed rollback first; cancel only after a brand-new SSH session succeeds',
+            tier: 'C', actor: 'Confirm Together',
+            summary: 'Enforce key-only SSH + fail2ban, align timezone/IPv6, verify backup ruleset loads cleanly, arm timed rollback, apply outbound rules, and verify with a brand-new SSH session.',
+            warn: 'Never cancel the rollback timer based on an existing SSH session — always test a brand-new SSH login.',
+            done: ['Key-only SSH verified', 'Brand-new SSH login passed before canceling rollback timer'],
+            files: ['references/en/04-route-c-vps-devbox.md'],
+            prompt: 'Draft a Tier-C hardening and nftables change card for my VPS including backup verification, timed rollback, and brand-new SSH validation.'
+          },
+          {
+            id: 'C-3', stage: 'S1 & IDE Audit', title: 'Egress/DNS Verification & Remote-SSH Boundaries',
+            sub: 'Ensure local IDE extensions do not leak from your host',
+            tier: 'B', actor: 'Confirm Together',
+            summary: 'Verify C1 native baseline or C2 dual-endpoint + Tier-C entry-block drill, inspect resolver logs/IPv6 routes, and audit Remote-SSH / Docker boundaries.',
+            warn: 'Local IDE extensions and SSH port forwards can bypass VPS outbound policies.',
+            done: ['Mode-specific S1 verification passed', 'Remote-SSH and container boundaries audited'],
+            files: ['references/en/04-route-c-vps-devbox.md', 'references/en/01-route-selection-and-preflight.md'],
+            prompt: 'Draft the S1 verification and Remote-SSH / container boundary audit checklist for my VPS.'
+          }
+        ]
+      },
+      T: {
+        id: 'T',
+        tab: 'Emergency Triage & Cleanup',
+        pill: 'Start Here On Errors',
+        maturity: 'Incident SOP · Stop-Loss First',
+        title: 'Incident Timeline, Troubleshooting & 5-Step Recoverable Cleanup',
+        desc: 'On login errors, 403/429/529, timeouts, or restriction: stop retrying immediately and build a unified-timestamp timeline.',
+        steps: [
+          {
+            id: 'T-1', stage: 'Stop-Loss', title: 'Stop Retrying & Build Incident Timeline',
+            sub: 'Separate Fact / Inference / Unknown with timestamps and Request IDs',
+            tier: 'A', actor: 'Confirm Together',
+            summary: 'Log timestamps, raw status codes (separating API permission_error from Web HTTP 403), Request IDs, and recent network/config changes.',
+            warn: 'Retrying across ASNs and browsers before confirming status widens contamination.',
+            done: ['Unified-timestamp incident timeline recorded', 'Facts separated from inferences'],
+            files: ['references/en/07-troubleshooting-and-cleanup.md', 'references/en/05-account-payment-and-sop.md'],
+            prompt: 'I hit an error with Claude. Follow claude-fortress incident mode (references/en/07-troubleshooting-and-cleanup.md) to build a unified-timestamp timeline and objective triage without telling me to retry blindly.'
+          },
+          {
+            id: 'T-2', stage: 'Root Cause', title: 'Diagnose Tunnel / Gateway / Single-Variable Latency',
+            sub: 'Audit host TUN conflict, gateway descriptors, resolver logs, or hop latency',
+            tier: 'B', actor: 'Agent',
+            summary: 'Check for host TUN hijacking vmnat.exe, missing gateway descriptors (verify disk chain + SHA-256), resolver logs, or single-variable hop latency.',
+            warn: 'Re-run S1 neutral & negative checks after any routing or protocol change.',
+            done: ['Root cause or bottleneck hop isolated', 'Fix verified without weakening boundaries'],
+            files: ['references/en/07-troubleshooting-and-cleanup.md', 'assets/host-clash-vmnat-bypass.yaml'],
+            prompt: 'Run a Tier-A read-only diagnosis for my current latency/timeout issue based on references/en/07-troubleshooting-and-cleanup.md and propose a minimal fix card.'
+          },
+          {
+            id: 'T-3', stage: 'Cleanup (Optional)', title: '5-Step Verifiable Local Data Quarantine',
+            sub: 'Inventory -> Private Backup -> SHA-256 -> Tier-C Quarantine -> Restore Check',
+            tier: 'C', actor: 'Confirm Together',
+            summary: 'After exiting all Claude apps/CLIs, enumerate specific cache files (asking separately about history), back up with SHA-256, and quarantine only approved items.',
+            warn: 'Default to recoverable quarantine, never wildcard delete; always protect source repos, Git work, settings.json, skills, and forensic logs.',
+            done: ['Backup & SHA-256 manifest verified', 'Protected dirs intact; restore path documented'],
+            files: ['references/en/07-troubleshooting-and-cleanup.md'],
+            prompt: 'Follow the 5-step verifiable cleanup protocol in references/en/07-troubleshooting-and-cleanup.md: complete Steps 1-2 read-only inventory first and ask separately about history without moving any file.'
+          }
+        ]
+      },
+      ADDON: {
+        id: 'ADDON',
+        isAddon: true,
+        tab: 'Post-Setup Add-on: Multi-Agent Collab',
+        pill: 'Optional After Setup',
+        maturity: 'Model-Agnostic Add-on · Usable Standalone',
+        title: 'Post-Setup Add-on: Multi-Agent Workspace & Local-First Conversion',
+        desc: 'Model-agnostic productivity workflow (Claude / Codex / Gemini / Cursor). Attach to your VM only after isolation is verified, or use standalone without any account/proxy.',
+        steps: [
+          {
+            id: 'M-1', stage: 'Permissions', title: 'Separate Host-Trusted Read-Only vs Guest-Writable Mounts',
+            sub: 'Never co-mount writable .git metadata or auto-execute guest outbox files',
+            tier: 'B', actor: 'Confirm Together',
+            summary: 'Split tools-ro & inbox-ro (guest read-only) from outbox-rw (untrusted guest output) and keep host/guest Git repos strictly separate.',
+            warn: 'Permission boundaries come from OS/mount ACLs, not folder names; never auto-run guest scripts or hooks.',
+            done: ['Mount read-only/writable boundaries defined', 'Host & guest Git metadata kept strictly separate'],
+            files: ['references/en/06-multi-agent-and-local-first.md'],
+            prompt: 'I want to plan the model-agnostic multi-agent collaboration add-on (references/en/06-multi-agent-and-local-first.md) — skip account/proxy intake and design a permission-separated directory layout.'
+          },
+          {
+            id: 'M-2', stage: 'Scaffold & Lint', title: 'Project Scaffold & 7-Section Handoff Lint',
+            sub: 'scaffold-projects.ps1 (no auto-commit) + check-handoff.ps1 (no Git execution)',
+            tier: 'B', actor: 'Agent',
+            summary: 'Preview missing templates with scaffold-projects.ps1 -DryRun and validate the 7 non-empty handoff sections with check-handoff.ps1 (which never executes git on untrusted repos).',
+            warn: 'Empty sets, reparse points, and read errors return non-zero; never auto-stage existing files.',
+            done: ['Dry-run reviewed before creating templates', 'check-handoff.ps1 passes on all projects'],
+            files: ['scripts/scaffold-projects.ps1', 'scripts/check-handoff.ps1', 'references/en/06-multi-agent-and-local-first.md'],
+            prompt: 'Draft a Tier-B plan to dry-run scripts/scaffold-projects.ps1 and lint handoff docs with scripts/check-handoff.ps1 in my private workspace root.'
+          },
+          {
+            id: 'M-3', stage: 'Local-First Docs', title: 'Convert Large Documents Locally to Markdown',
+            sub: 'to_md.py (single-writer lock, atomic manifest, untrusted-input discipline)',
+            tier: 'B', actor: 'Agent',
+            summary: 'Convert large PDF/Office files locally with scripts/to_md.py (Python 3.10+), then search targeted sections with ripgrep.',
+            warn: 'Convert untrusted documents in an offline, low-privilege environment; converted Markdown remains untrusted and must be manually redacted before cloud sharing.',
+            done: ['Dependencies audited', 'Lightweight Markdown & atomic manifest generated cleanly'],
+            files: ['scripts/to_md.py', 'references/en/06-multi-agent-and-local-first.md'],
+            prompt: 'Draft a Tier-B local conversion plan for scripts/to_md.py covering dependencies, input/output isolation, and manual redaction before running anything.'
+          }
+        ]
+      }
+    };
+
+    const TIER_LABEL = {
+      A: 'Tier A · Offline Read-Only',
+      B: 'Tier B · Reversible / Neutral Probe',
+      C: 'Tier C · High-Risk Confirm'
+    };
+
+    let storageUsable = true;
+    function loadDone() {
+      const clean = Object.create(null);
+      try {
+        const value = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+        if (value && typeof value === 'object' && !Array.isArray(value)) {
+          for (const step of Object.values(ROUTES).flatMap(route => route.steps)) {
+            if (Object.prototype.hasOwnProperty.call(value, step.id) && value[step.id] === true) clean[step.id] = true;
+          }
+        }
+      } catch { storageUsable = false; }
+      return clean;
+    }
+    const state = { quiz: { goal: 'new', machine: 'vm', desktop: 'yes' }, routeId: 'B', stepId: 'B-1', done: loadDone() };
+    const byId = id => document.getElementById(id);
+    const promptSuffix = '\n\nNote: This is a preparation request, NOT approval. Draft the inspection or change card only; do not access the network, edit configs, write files, launch apps, or act on accounts until I explicitly approve.';
+
+    function saveDone() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state.done));
+        return storageUsable = true;
+      } catch { return storageUsable = false; }
+    }
+
+    function showToast(message) {
+      const toast = byId('toast');
+      toast.textContent = message;
+      toast.classList.add('show');
+      clearTimeout(window.__toastTimer);
+      window.__toastTimer = setTimeout(() => toast.classList.remove('show'), 2600);
+    }
+
+    function computeRecommendation() {
+      const { goal, machine, desktop } = state.quiz;
+      if (goal === 'trouble') return { id: 'T', reason: 'Stop retrying immediately and collect desensitized incident evidence first.' };
+      if (desktop === 'yes' && machine !== 'vm') return { id: null, reason: 'Conflict: Claude Desktop is not recommended outside an isolated Windows VM. Either switch to a capable Windows VM (Route B) or drop Desktop to use Web + CLI.' };
+      if (machine === 'vps') return { id: 'C', reason: 'Remote Linux CLI only — decide between C1 native and C2 proxy default-deny first.' };
+      if (machine === 'whole') return { id: 'A2', reason: 'Whole-machine reference design — verify OS firewall rollback before applying.' };
+      if (machine === 'light') return { id: 'A1', reason: 'Lightweight app-level separation (not OS Fail-Closed) for Web + CLI.' };
+      return { id: 'B', reason: 'Best fit for VMware + dedicated OpenWrt reference implementation; start with S0 offline inventory and complete local cold/warm boot self-checks.' };
+    }
+
+    function element(tag, text, className) {
+      const node = document.createElement(tag);
+      if (text) node.textContent = text;
+      if (className) node.className = className;
+      if (tag === 'button') node.type = 'button';
+      return node;
+    }
+
+    function renderQuizResult() {
+      const rec = computeRecommendation();
+      const box = byId('quizResult');
+      box.replaceChildren(element('div', rec.id ? ROUTES[rec.id].tab + ' — ' + rec.reason : rec.reason));
+      if (rec.id) {
+        const button = element('button', 'Switch to Recommended Route', 'btn primary');
+        button.onclick = () => selectRoute(rec.id);
+        box.appendChild(button);
+      }
+    }
+
+    function renderTabs() {
+      const container = byId('routeTabs');
+      container.replaceChildren();
+      for (const id of ['B', 'A1', 'A2', 'C', 'T', 'ADDON']) {
+        const route = ROUTES[id];
+        if (route.isAddon) container.appendChild(element('div', '', 'tab-divider'));
+        const button = element('button', route.tab, 'tab' + (route.isAddon ? ' addon' : '') + (state.routeId === id ? ' active' : ''));
+        button.setAttribute('aria-pressed', String(state.routeId === id));
+        button.appendChild(element('span', route.pill, 'mini-pill'));
+        button.onclick = () => selectRoute(id);
+        container.appendChild(button);
+      }
+    }
+
+    function selectRoute(id) {
+      state.routeId = id;
+      state.stepId = ROUTES[id].steps[0].id;
+      renderAll();
+    }
+
+    function badges(step) {
+      return [element('span', TIER_LABEL[step.tier], 'badge tier-' + step.tier), element('span', step.actor, 'badge actor')];
+    }
+
+    function renderFlow() {
+      const route = ROUTES[state.routeId];
+      byId('routeTitle').textContent = route.title;
+      byId('routeMaturity').textContent = route.maturity;
+      byId('routeDesc').textContent = route.desc;
+      const done = route.steps.filter(step => state.done[step.id] === true).length;
+      const pct = Math.round(done / route.steps.length * 100);
+      byId('progressText').textContent = 'Personal notes ' + done + ' / ' + route.steps.length + ' (not security evidence)' + (storageUsable ? '' : ' · session only');
+      byId('progressFill').style.width = pct + '%';
+      const list = byId('flowList');
+      list.replaceChildren();
+      route.steps.forEach((step, index) => {
+        if (index) list.appendChild(element('div', '↓', 'flow-connector'));
+        const checked = state.done[step.id] === true;
+        const node = element('div', '', 'node' + (state.stepId === step.id ? ' selected' : '') + (checked ? ' done' : ''));
+        const check = element('button', checked ? '✓' : '', 'node-check');
+        check.setAttribute('aria-label', 'Toggle personal note: ' + step.title);
+        check.setAttribute('aria-pressed', String(checked));
+        check.onclick = () => toggleDone(step.id);
+        const label = element('div');
+        const name = element('button', step.stage + ' · ' + step.title, 'btn node-title');
+        name.onclick = () => { state.stepId = step.id; renderFlow(); renderDetail(); };
+        label.append(name, element('div', step.sub, 'node-sub'));
+        const group = element('div', '', 'badges');
+        group.append(...badges(step));
+        node.append(check, label, group);
+        list.appendChild(node);
+      });
+    }
+
+    function renderDetail() {
+      const route = ROUTES[state.routeId];
+      const step = route.steps.find(entry => entry.id === state.stepId) || route.steps[0];
+      byId('dTitle').textContent = step.stage + ' · ' + step.title;
+      byId('dBadges').replaceChildren(...badges(step));
+      byId('dSummary').textContent = step.summary;
+      byId('dWarnWrap').style.display = step.warn ? 'block' : 'none';
+      byId('dWarn').textContent = step.warn || '';
+      byId('dDoneList').replaceChildren(...step.done.map(item => element('li', item)));
+      byId('dFiles').replaceChildren(...step.files.map(file => {
+        const anchor = element('a', file, 'chip');
+        if (/^(?:[A-Z0-9._-]+\.md|(?:references(?:\/en)?|scripts|assets)\/[a-zA-Z0-9._-]+)$/.test(file) && !file.includes('..')) {
+          anchor.href = '../' + file;
+        }
+        return anchor;
+      }));
+      const prompt = step.prompt + promptSuffix;
+      byId('dPrompt').textContent = prompt;
+      byId('btnToggleDone').textContent = state.done[step.id] === true ? 'Clear Personal Note' : 'Mark Personal Note';
+      byId('btnToggleDone').onclick = () => toggleDone(step.id);
+      byId('btnCopyPrompt').onclick = () => copyText(prompt);
+    }
+
+    function toggleDone(id) {
+      if (state.done[id] === true) delete state.done[id];
+      else state.done[id] = true;
+      if (!saveDone()) showToast('Browser storage unavailable; note kept in memory for this tab only.');
+      renderFlow();
+      renderDetail();
+    }
+
+    async function copyText(text) {
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(text);
+          showToast('Copied! Reminder: copying is not approval.');
+          return true;
+        }
+      } catch { }
+      const field = element('textarea');
+      field.value = text;
+      field.style.position = 'fixed';
+      field.style.opacity = '0';
+      document.body.appendChild(field);
+      let copied = false;
+      try { field.select(); copied = document.execCommand('copy') === true; }
+      catch { copied = false; }
+      finally { field.remove(); }
+      showToast(copied ? 'Copied! Reminder: copying is not approval.' : 'Auto-copy blocked; please select and copy the prompt text manually.');
+      return copied;
+    }
+
+    function renderAll() { renderQuizResult(); renderTabs(); renderFlow(); renderDetail(); }
+
+    document.querySelectorAll('.opt-list').forEach(list => {
+      const question = list.getAttribute('data-q');
+      list.querySelectorAll('.opt-btn').forEach(button => {
+        button.onclick = () => {
+          list.querySelectorAll('.opt-btn').forEach(other => other.classList.remove('active'));
+          button.classList.add('active');
+          state.quiz[question] = button.getAttribute('data-val');
+          renderQuizResult();
+        };
+      });
+    });
+    let quizOpen = true;
+    byId('quizToggle').onclick = () => {
+      quizOpen = !quizOpen;
+      byId('quizBody').style.display = quizOpen ? 'block' : 'none';
+      byId('quizToggleText').textContent = quizOpen ? 'Collapse ▲' : 'Expand ▼';
+    };
+    const modal = byId('beginnerModal');
+    byId('btnBeginner').onclick = () => modal.classList.add('open');
+    byId('btnCloseModal').onclick = () => modal.classList.remove('open');
+    modal.onclick = event => { if (event.target === modal) modal.classList.remove('open'); };
+    byId('btnReset').onclick = () => {
+      state.done = Object.create(null);
+      const persisted = saveDone();
+      renderAll();
+      showToast(persisted ? 'Local notes reset.' : 'Cleared for this tab; browser could not persist reset.');
+    };
+    renderAll();
+  </script>
+</body>
+</html>

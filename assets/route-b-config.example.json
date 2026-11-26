@@ -1,0 +1,20 @@
+{
+  "schema_version": 2,
+  "target_alias": "guest-example",
+  "generation": "example-not-deployed",
+  "guest_hostname": "REPLACE-ME",
+  "desktop_sid": "REPLACE-ME",
+  "app_id": "REPLACE-ME",
+  "entry_ipv4": "192.0.2.10",
+  "entry_port": 443,
+  "expected_egress_ipv4": "198.51.100.10",
+  "dhcp_ipv4": "192.168.242.1",
+  "management_ipv4": "192.168.125.1",
+  "lan_adapter": "Ethernet0",
+  "tun_adapter": "Mihomo",
+  "tun_ipv4_cidr": "198.18.0.0/16",
+  "proxy_port": 7897,
+  "core_path": "C:\\ProgramData\\ProxyCore\\proxy-core.exe",
+  "sshd_path": "C:\\Windows\\System32\\OpenSSH\\sshd.exe",
+  "app_publisher": "REPLACE-ME"
+}

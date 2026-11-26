@@ -1,0 +1,13 @@
+# 宿主机 Clash Verge / Mihomo 规则扩展片段（v1.1）
+#
+# 用途：宿主机开启 TUN 且处于「规则模式」时，防止宿主机 TUN 劫持 VMware NAT 进程（vmnat.exe）
+#       导致 VM 形成双层代理嵌套、Fake-IP 冲突与超时。
+#
+# 重要安全提示：
+# 1. 本片段【绝不包含 MATCH 规则】，避免截断宿主机原有的后续分流规则！
+# 2. PROCESS-PATH 规则作用于同一台宿主机上经由 vmnat.exe 出网的所有 VMware NAT 虚拟机。
+#    替换为经核实的真实进程路径（不要提交路径实值）；应用前请确认宿主机上没有其他依赖宿主机 TUN 出网的 NAT 虚拟机；否则是 C 档，先评估影响并取得独立批准。
+# 3. 应用后务必检查合并后的最终生效规则，并复测宿主机原有分流及其他虚拟机。
+
+prepend:
+  - 'AND,((IN-TYPE,TUN),(NETWORK,TCP),(PROCESS-PATH,<VMNAT_EXE_ABSOLUTE_PATH>)),DIRECT'

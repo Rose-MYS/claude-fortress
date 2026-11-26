@@ -1,0 +1,45 @@
+add table inet vm_gate
+delete table inet vm_gate
+table inet vm_gate {
+    counter denied_input { }
+    counter denied_output { }
+    counter denied_forward { }
+    counter allowed_proxy { }
+    counter allowed_ssh { }
+
+    chain input {
+        type filter hook input priority filter; policy drop;
+        meta nfproto ipv6 counter name denied_input drop
+        iifname "lo" accept
+        iifname "<LAN_IF>" ip saddr { 0.0.0.0, <GUEST_LAN_IP> } ip daddr { 255.255.255.255, <GATEWAY_LAN_IP> } udp sport 68 udp dport 67 accept
+        counter name denied_input drop
+    }
+    chain output {
+        type filter hook output priority filter; policy drop;
+        meta nfproto ipv6 counter name denied_output drop
+        oifname "lo" accept
+        oifname "<LAN_IF>" ip saddr <GATEWAY_LAN_IP> ip daddr { 255.255.255.255, <GUEST_LAN_IP> } udp sport 67 udp dport 68 accept
+        counter name denied_output drop
+    }
+    chain forward {
+        type filter hook forward priority filter; policy drop;
+        meta nfproto ipv6 counter name denied_forward drop
+        ct state invalid counter name denied_forward drop
+        iifname "<LAN_IF>" oifname "<WAN_IF>" ip saddr <GUEST_LAN_IP> ip daddr <ENTRY_IP> tcp dport <ENTRY_PORT> ct state established counter name allowed_proxy accept
+        iifname "<LAN_IF>" oifname "<WAN_IF>" ip saddr <GUEST_LAN_IP> ip daddr <ENTRY_IP> tcp dport <ENTRY_PORT> ct state new tcp flags & (fin | syn | rst | ack) == syn counter name allowed_proxy accept
+        iifname "<WAN_IF>" oifname "<LAN_IF>" ip saddr <ENTRY_IP> ip daddr <GUEST_LAN_IP> tcp sport <ENTRY_PORT> ct state established counter name allowed_proxy accept
+        iifname "<WAN_IF>" oifname "<LAN_IF>" ct status dnat ct original ip daddr <GATEWAY_WAN_IP> ct original proto-dst 22 ip saddr <HOST_MGMT_IP> ip daddr <GUEST_LAN_IP> tcp dport 22 ct state established counter name allowed_ssh accept
+        iifname "<WAN_IF>" oifname "<LAN_IF>" ct status dnat ct original ip daddr <GATEWAY_WAN_IP> ct original proto-dst 22 ip saddr <HOST_MGMT_IP> ip daddr <GUEST_LAN_IP> tcp dport 22 ct state new tcp flags & (fin | syn | rst | ack) == syn counter name allowed_ssh accept
+        iifname "<LAN_IF>" oifname "<WAN_IF>" ct status dnat ct original ip daddr <GATEWAY_WAN_IP> ct original proto-dst 22 ip saddr <GUEST_LAN_IP> ip daddr <HOST_MGMT_IP> tcp sport 22 ct state established counter name allowed_ssh accept
+        iifname "<WAN_IF>" oifname "<LAN_IF>" ip daddr <GUEST_LAN_IP> ip protocol icmp icmp type destination-unreachable icmp code frag-needed ct state related ct original protocol tcp ct original ip saddr <GUEST_LAN_IP> ct original ip daddr <ENTRY_IP> ct original proto-dst <ENTRY_PORT> accept
+        counter name denied_forward drop
+    }
+    chain prerouting {
+        type nat hook prerouting priority dstnat; policy accept;
+        iifname "<WAN_IF>" ip saddr <HOST_MGMT_IP> ip daddr <GATEWAY_WAN_IP> tcp dport 22 dnat ip to <GUEST_LAN_IP>:22
+    }
+    chain postrouting {
+        type nat hook postrouting priority srcnat; policy accept;
+        oifname "<WAN_IF>" ip saddr <GUEST_LAN_IP> ip daddr <ENTRY_IP> tcp dport <ENTRY_PORT> masquerade
+    }
+}

@@ -1,0 +1,22 @@
+{
+  "schema_version": 2,
+  "request_id": "00000000000000000000000000000000",
+  "target_alias": "guest-example",
+  "generation": "example-not-deployed",
+  "config_sha256": "REPLACE-ME",
+  "functional_report_sha256": "REPLACE-ME",
+  "captured_utc": null,
+  "checks": {
+    "dns": "not_run",
+    "ipv6": "not_run",
+    "cold_boot": "not_run",
+    "reload_failure": "not_run",
+    "entry_loss": "not_run",
+    "existing_connections": "not_run",
+    "udp": "not_run",
+    "second_nic": "not_run",
+    "management_ssh": "not_run",
+    "browser_webrtc": "not_run"
+  },
+  "private_evidence_reference": "REPLACE-ME"
+}
