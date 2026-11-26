@@ -1,0 +1,57 @@
+name: Release skill zip
+
+# 打 tag（如 v1.2.0）或手动触发时，打包 claude-fortress.zip 并发布到 GitHub Release。
+# 网站与 README 用固定链接下载最新版：
+#   https://github.com/Rose-MYS/claude-fortress/releases/latest/download/claude-fortress.zip
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: '要发布的 tag（如 v1.2.0）；不存在会基于当前分支创建'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve tag
+        id: meta
+        run: |
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Check SKILL.md frontmatter
+        run: |
+          name=$(sed -n '2,5p' SKILL.md | sed -n 's/^name:[[:space:]]*//p' | tr -d '\r')
+          test "$name" = "claude-fortress" || { echo "SKILL.md name is '$name', expected claude-fortress"; exit 1; }
+
+      - name: Build claude-fortress.zip
+        run: |
+          mkdir -p dist/claude-fortress
+          # 只打包 Skill 本体；网站入口、CI 与插件市场清单不进安装包
+          tar --exclude='./.git' --exclude='./.github' --exclude='./.claude-plugin' \
+              --exclude='./dist' --exclude='./index.html' --exclude='./.gitattributes' \
+              -cf - . | tar -xf - -C dist/claude-fortress
+          cd dist && zip -r -X claude-fortress.zip claude-fortress
+          unzip -l claude-fortress.zip | head -n 40
+          # 顶层必须是 claude-fortress/，Claude 应用上传才能识别
+          ! unzip -Z1 claude-fortress.zip | grep -v '^claude-fortress/'
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.meta.outputs.tag }}
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" dist/claude-fortress.zip --clobber
+          else
+            gh release create "$TAG" dist/claude-fortress.zip \
+              --target "${{ github.sha }}" --title "claude-fortress $TAG" --generate-notes
+          fi

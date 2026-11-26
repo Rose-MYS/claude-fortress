@@ -1,0 +1,14 @@
+{
+  "name": "fortress",
+  "version": "1.2.0",
+  "description": "Plan, inventory, build and maintain isolated Claude environments (lightweight / whole-machine / VMware + OpenWrt / Linux VPS) with S0-S4 stage gates and Tier A/B/C authorization. 中英双语。",
+  "author": {
+    "name": "Rose-MYS",
+    "url": "https://github.com/Rose-MYS"
+  },
+  "homepage": "https://rose-mys.github.io/claude-fortress/",
+  "repository": "https://github.com/Rose-MYS/claude-fortress",
+  "license": "MIT",
+  "keywords": ["claude", "isolation", "openwrt", "vmware", "skill", "multi-agent"],
+  "skills": ["./"]
+}

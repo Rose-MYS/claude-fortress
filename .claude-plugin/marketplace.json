@@ -1,0 +1,15 @@
+{
+  "name": "rose-mys",
+  "description": "Rose-MYS 的 Claude Code 插件市场 / Claude Code plugins by Rose-MYS",
+  "owner": {
+    "name": "Rose-MYS",
+    "url": "https://github.com/Rose-MYS"
+  },
+  "plugins": [
+    {
+      "name": "fortress",
+      "source": "./",
+      "description": "Claude 隔离环境搭建与维护 Skill（四条路线、S0-S4 阶段门、A/B/C 授权分档）"
+    }
+  ]
+}

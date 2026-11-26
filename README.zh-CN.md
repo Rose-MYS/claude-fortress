@@ -16,10 +16,23 @@
 
 信任宿主、虚拟化、网关固件、客机管理员和上游运营方；同一桌面账户的其他程序不是防误启动辅助可约束的对象。顶层 [Skill（双语主入口）](SKILL.md) / [Skill 中文版](SKILL.zh-CN.md) 定义 S0–S4 和 A/B/C；[01 验收协议](references/01-route-selection-and-preflight.md) 定义功能、边界和停条件。
 
+## 安装 Skill
+
+任选一种。[交互式安装指引](https://rose-mys.github.io/claude-fortress/#install) 里有同样的选项和一键复制按钮。
+
+| 方式 | 怎么做 |
+|---|---|
+| **让 Agent 帮我装**（最简单） | 对它说：“把 https://github.com/Rose-MYS/claude-fortress 克隆到我的 Skills 目录（Claude Code 为 `~/.claude/skills/claude-fortress`），只安装，不要运行任何脚本。” |
+| **Claude Code 插件** | `/plugin marketplace add Rose-MYS/claude-fortress`，再 `/plugin install fortress@rose-mys`（以后用 `/plugin` 更新） |
+| **git** | `git clone https://github.com/Rose-MYS/claude-fortress.git ~/.claude/skills/claude-fortress`（PowerShell 路径写 `"$env:USERPROFILE\.claude\skills\claude-fortress"`） |
+| **zip / Claude 应用** | 下载 [claude-fortress.zip](https://github.com/Rose-MYS/claude-fortress/releases/latest/download/claude-fortress.zip)。Claude 网页端/桌面端：Customize → Skills → + → Create skill → Upload a skill，直接上传 zip（需在 Settings → Capabilities 开启代码执行）；其他 Agent：解压到 Skills 目录 |
+
+装好后验证：新开对话问 Agent“你能看到 claude-fortress 这个 Skill 吗？请给我一份 A 档只读的 S0 盘点清单。”
+
 ## 五分钟：只做离线盘点，不部署
 
 1. 从本地浏览器直接打开 [中文交互向导](assets/interactive-guide.html)（或 [English Guide](assets/interactive-guide.en.html)）；单 HTML 没有外部资源。**只有打开本地文件才是离线**；网页托管（GitHub Pages）访问需要联网。复制不是批准、勾选不是安全证据。
-2. 若要体验 Skill，只复制 `claude-fortress/` 子目录。Claude Code 使用用户目录 `.claude/skills/` 或项目级同名目录；Codex 与其他宿主使用各自已启用的 Skills 目录，以本机配置为准。先用已可用的宿主，不要求安装或打开待验收的客户端。
+2. 按上面「[安装 Skill](#安装-skill)」任选一种方式安装。先用已可用的宿主，不要求安装或打开待验收的客户端。
 3. 对 Agent 说：“请读 Skill，给我一份 A 档、离线、只读的盘点清单和对比建议；不要写文件、联网、改网卡、安装或启动。”安装 Skill 文件本身不属于 A 档，离线盘点也不等于宿主 Agent 没有自己的后台联网。
 
 ## 路线 B 首次部署必做自检（在你的机器上亲自验证）
