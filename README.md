@@ -18,13 +18,23 @@
 
 **Trust boundary**: You still trust the host OS, hypervisor, gateway firmware, guest administrator, and upstream network operator. Other processes running under the same desktop account cannot be constrained by an anti-mislaunch helper. See [SKILL.md](SKILL.md) ([中文版](SKILL.zh-CN.md)) for the S0–S4 stage gates and A/B/C authorization tiers, and [01 Preflight & Evidence Contract](references/en/01-route-selection-and-preflight.md) for pass/fail/stop criteria.
 
+## Install the Skill
+
+Pick one — the [interactive install guide](https://rose-mys.github.io/claude-fortress/#install) walks through the same options with copy buttons.
+
+| Method | How |
+|---|---|
+| **Ask your Agent** (easiest) | Tell it: *"Clone https://github.com/Rose-MYS/claude-fortress into my skills folder (`~/.claude/skills/claude-fortress` for Claude Code). Only install — don't run any script."* |
+| **Claude Code plugin** | `/plugin marketplace add Rose-MYS/claude-fortress` then `/plugin install fortress@rose-mys` (updates via `/plugin`) |
+| **git** | `git clone https://github.com/Rose-MYS/claude-fortress.git ~/.claude/skills/claude-fortress` (PowerShell: `"$env:USERPROFILE\.claude\skills\claude-fortress"`) |
+| **Zip / Claude app** | Download [claude-fortress.zip](https://github.com/Rose-MYS/claude-fortress/releases/latest/download/claude-fortress.zip). Claude web/desktop: Customize → Skills → + → Create skill → Upload a skill (upload the zip as-is; needs code execution on in Settings → Capabilities). Other agents: unzip into your skills folder |
+
+Check it worked: in a new conversation ask *"Can you see the claude-fortress Skill? Give me a Tier-A read-only S0 inventory checklist."*
+
 ## 5-Minute Offline Start (Read-Only Inventory, Zero Deployment)
 
-1. Open the zero-dependency interactive flowchart directly from disk: [Interactive Guide (EN)](assets/interactive-guide.en.html) | [中文交互向导](assets/interactive-guide.html) (or preview via GitHub Pages once enabled). **Only opening the local file is offline**; hosted web access uses the network. Copying a prompt is **not** approval, and checking a box is **not** security evidence.
-2. To install the Skill, copy **only** the `claude-fortress/` directory:
-   - **Claude Code**: `~/.claude/skills/claude-fortress/` (user-level) or `<project>/.claude/skills/claude-fortress/` (project-level)
-   - **Codex / Antigravity / other hosts**: your host's enabled skills directory (e.g. `~/.agents/skills/claude-fortress/`)
-   - Use an already available host first — you do **not** need to install or open the target client before verification.
+1. Open the zero-dependency interactive flowchart directly from disk: [Interactive Guide (EN)](assets/interactive-guide.en.html) | [中文交互向导](assets/interactive-guide.html) (or [open it on GitHub Pages](https://rose-mys.github.io/claude-fortress/)). **Only opening the local file is offline**; hosted web access uses the network. Copying a prompt is **not** approval, and checking a box is **not** security evidence.
+2. Install the Skill using any method in [Install the Skill](#install-the-skill) above. Use an already available host first — you do **not** need to install or open the target client before verification.
 3. Send your Agent:
    > *"Please read the `claude-fortress` Skill and give me a Tier-A offline, read-only inventory checklist and route comparison; do not write files, access the network, modify NICs, install software, or launch apps."*
    *(Note: Installing Skill files itself is not Tier-A, and offline inventory does not imply the host Agent has no background network activity of its own.)*
