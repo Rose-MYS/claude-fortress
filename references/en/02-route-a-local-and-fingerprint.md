@@ -17,25 +17,35 @@
 3. **Pre-Launch Check**: Verify the proxy port returns `<RESIDENTIAL_EGRESS_IP>` before opening the Profile.
 
 #### 2.1 Advanced Practice: Per-Node Isolated Browser (Per-Node Auto-Match)
-For users building or wrapping an open-source fingerprint browser launcher:
-- **One Node = One Data Directory (Strict Cookie Isolation)**: Assign each proxy node its own `user-data-dir` (cookies, LocalStorage, IndexedDB, cache never shared) — conceptually one standalone browser per node.
-- **Auto-Align Environment to Active Node**: Before launching, probe neutral egress metadata (region, timezone) via that node's proxy port and auto-align:
-  - **Locale & Language** (e.g., US node → `en-US`, TW node → Traditional Chinese/TW region);
-  - **Timezone & Browser Parameters** matching the egress location;
-  - **Remote DNS** routed through the active node.
-- **Boundary Reminder**: Even with per-node auto-match, this remains **app-level isolation (not OS Fail-Closed)**. Always refuse to launch if the probe fails or the egress drifts — never fall back to direct egress.
+For users building or wrapping a lightweight Chrome/Edge launcher (see bundled reference scripts [../../scripts/route-a1-browser-launcher.py](../../scripts/route-a1-browser-launcher.py), [../../scripts/route-a1-browser-session.mjs](../../scripts/route-a1-browser-session.mjs), and [../../assets/route-a1-nodes.example.json](../../assets/route-a1-nodes.example.json)):
+- **One Stable Node ID = One Dedicated `user-data-dir` + Dedicated Proxy Port**: Persist node identity and exclusive locks per profile/node/port so cookies, LocalStorage, IndexedDB, and caches are never shared across nodes. **Do not share one mixed port across multiple nodes and switch upstream nodes mid-session**, or an existing profile will silently egress through the new node.
+- **Verify & Align Environment to Active Node**: Before launching, verify the node's proxy port matches your known `<RESIDENTIAL_EGRESS_IP>` (never treat an unverified first echo as the baseline), then inject/verify:
+  - **Locale & Language** (e.g., US node → `en-US`, TW node → `zh-TW`);
+  - **Timezone** (on Windows Chrome, inject via CDP `Emulation.setTimezoneOverride` and read back from the page — `TZ` env vars alone do not override Windows Chrome page timezone);
+  - **Remote DNS** (`--host-resolver-rules="MAP * ~NOTFOUND, EXCLUDE 127.0.0.1"` plus independent proxy DNS log verification — geo metadata alone never proves DNS path).
+- **Boundary Reminder**: Even with per-node auto-match, this remains **app-level isolation (not OS Fail-Closed)** and is not kernel-level Canvas/WebGL spoofing. Always refuse to launch on probe failure, IP drift, or profile identity mismatch — never fall back to direct egress.
+
+#### 2.2 Six Field-Tested Windows Chrome / Edge Gotchas
+1. **Chrome 136+ / Edge 136+ CDP Default-Dir Check vs. `clean_env`**: When stripping proxy/credential env vars before spawning Chrome/Edge, **keep the real OS user's `USERPROFILE`, `LOCALAPPDATA`, and `APPDATA`** (isolate only `--user-data-dir`, `HOME`, and `TEMP`/`TMP`). Overwriting `LOCALAPPDATA` breaks Chromium `PathService`, causing a fail-closed `DevTools remote debugging requires a non-default data directory` error even with `--user-data-dir`.
+2. **Windows Chrome Ignores `TZ`**: Inject timezone via CDP `Emulation.setTimezoneOverride`, read it back on the initial tab, and enable `Target.setAutoAttach` (including `iframe` targets) so cross-site iframes align too (audit Workers/Service Workers separately).
+3. **WebRTC Requires Both Flag & Profile Prefs**: Use `--webrtc-ip-handling-policy=disable_non_proxied_udp` (not the commonly mistyped `--force-webrtc-ip-handling-policy`), write `webrtc.ip_handling_policy` in `Default/Preferences`, verify no URL exceptions exist, and confirm zero ICE candidates in-page.
+4. **Windows Registry External Extensions & Process Trees**: Even a fresh `--user-data-dir` reads `Software\Google\Chrome\Extensions\`; pass `--disable-extensions`, `--disable-sync`, and `--disable-background-networking`, and pair profile/node/port locks with a Windows Job Object to prevent profile reuse and orphan child processes.
+5. **Loopback Proxy Bypass (`<-loopback>`)**: Chromium bypasses proxies for loopback by default; pass `--proxy-bypass-list=<-loopback>` when verifying local proxy-outage canaries.
+6. **Kernel-Level IPv6 Reachability Probes**: Chrome issues internal `UDP_CONNECT` route checks to `[2001:4860:4860::8888]:443` and Edge to `[2603:1020:201:10::10f]:443` (zero UDP payload bytes sent) — another reminder that A1 is app-level only, not OS Fail-Closed.
+
+> **Why Route A1 Prefers Local Chrome/Edge Over Heavy Open-Source Anti-Detect Kernels (e.g. Camoufox)**: Field testing showed Camoufox's Windows package is ~1.3 GB with a non-resumable GitHub Releases fetcher plus Playwright and 40+ Python dependencies, making it brittle on slow or throttled links. The bundled Chrome/Edge launcher requires 0 MB extra browser download while covering per-node profile isolation, CDP timezone, WebRTC dual-lock, and proxy-outage refusal. If you need stronger isolation than app-level separation, upgrade to [Route B (VM + OpenWrt Fortress)](03-route-b-vm-openwrt-fortress.md).
 
 > **Author's Tip**: For early setup tasks like building a fingerprint browser launcher or proxy wrapper, prefer using **GPT / Codex** so you never need to touch or rely on Claude before your isolated environment is verified.
 
 ### 3. CLI Side: Split Neutral Preflight and Approved Launch (Never Chain Together)
 
-The local proxy must expose an **HTTP or mixed port** — do not pass a raw SOCKS URL directly to Claude Code CLI. Verify the local listener and trusted executable path first. The snippets below are **templates**; never treat Stage S1 exit code 0 as launch authorization.
+The local proxy must expose an **HTTP or mixed port** — do not pass a raw SOCKS URL directly to Claude Code CLI. In S0, verify local listener status, declared protocol, and trusted executable path offline (print env var names and desensitized status only, never values that may contain proxy credentials). The snippets below are **templates**; never treat Stage S1 exit code 0 as launch authorization, and never let Web S1 pass authorize CLI launch.
 
 #### S1: Neutral Functional Check Only (Tier-B)
 
 ```powershell
 $proxy = 'http://127.0.0.1:<HTTP_PORT>'
-$expected = '<EXPECTED_IPV4>'
+$expected = '<RESIDENTIAL_EGRESS_IP>'
 $curl = Join-Path ([Environment]::SystemDirectory) 'curl.exe'
 if ($proxy -notmatch '^http://127[.]0[.]0[.]1:[0-9]{1,5}$' -or $expected -notmatch '^[0-9.]+$') { throw 'Set private values first' }
 foreach ($site in 'https://api.ipify.org','https://ifconfig.me/ip') {
@@ -44,22 +54,26 @@ foreach ($site in 'https://api.ipify.org','https://ifconfig.me/ip') {
 }
 ```
 
-*(PowerShell 5.1 drops empty string arguments like `--noproxy ''`, so we pass the reserved non-matching domain `no-proxy.invalid`.)*
+*(PowerShell 5.1 drops empty string arguments like `--noproxy ''`, so we pass the reserved non-matching domain `no-proxy.invalid`. The Bash template runs inside a subshell `( ... )` so `exit 2` does not close an interactive terminal if pasted directly.)*
 
 ```bash
-proxy='http://127.0.0.1:<HTTP_PORT>'
-expected='<EXPECTED_IPV4>'
-for site in https://api.ipify.org https://ifconfig.me/ip; do
+(
+  proxy='http://127.0.0.1:<HTTP_PORT>'
+  expected='<RESIDENTIAL_EGRESS_IP>'
+  printf '%s' "$proxy" | grep -Eq '^http://127\.0\.0\.1:[0-9]{1,5}$' || { echo 'Invalid proxy'; exit 2; }
+  printf '%s' "$expected" | grep -Eq '^[0-9.]+$' || { echo 'Invalid expected IPv4'; exit 2; }
+  for site in https://api.ipify.org https://ifconfig.me/ip; do
     observed=$(env -i PATH=/usr/bin:/bin /usr/bin/curl -q -4 -fsS --proto '=https' --max-time 6 --noproxy no-proxy.invalid --proxy "$proxy" "$site") || exit 2
     [ "$observed" = "$expected" ] || exit 2
-done
+  done
+)
 ```
 
-Separately inspect DNS path, WebRTC, and proxy-failure behavior in the target browser (CLI has no WebRTC check). Do not treat locale/language alignment as a security control.
+Note: `curl -4` to `127.0.0.1` only constrains loopback address family and does not prove upstream IPv6 blocking or app compliance. Separately inspect DNS path, WebRTC, and proxy-failure behavior in the target browser (CLI has no WebRTC check). Do not treat locale/language alignment as a security control.
 
 #### S2/S3: Separate User-Approved Launch (Tier-C)
 
-Run under a dedicated, restricted user account and audited project directory with an explicit private config directory. **Do not auto-chain this after S1**, and do not inherit credentials.
+Run under a dedicated, restricted OS user account and audited project directory with an explicit private config directory (cleaning env vars does **not** switch OS users). **Do not auto-chain this after S1**, and do not inherit credentials.
 
 ```powershell
 $start = New-Object Diagnostics.ProcessStartInfo
@@ -76,19 +90,24 @@ $start.EnvironmentVariables['HTTP_PROXY'] = 'http://127.0.0.1:<HTTP_PORT>'
 $start.EnvironmentVariables['HTTPS_PROXY'] = 'http://127.0.0.1:<HTTP_PORT>'
 $start.EnvironmentVariables['NO_PROXY'] = 'localhost,127.0.0.1'
 $start.EnvironmentVariables['CLAUDE_CONFIG_DIR'] = '<PRECREATED_PRIVATE_CONFIG_DIR>'
-if ($start.FileName -match '[<>]' -or $start.WorkingDirectory -match '[<>]' -or
-    $start.EnvironmentVariables['HTTPS_PROXY'] -match '[<>]' -or $start.EnvironmentVariables['CLAUDE_CONFIG_DIR'] -match '[<>]') { throw 'Set vetted local paths and proxy first' }
+if ($start.FileName -match '[<>]' -or !(Test-Path -LiteralPath $start.FileName -PathType Leaf) -or
+    !(Test-Path -LiteralPath $start.WorkingDirectory -PathType Container) -or
+    !(Test-Path -LiteralPath $start.EnvironmentVariables['CLAUDE_CONFIG_DIR'] -PathType Container) -or
+    $start.EnvironmentVariables['HTTPS_PROXY'] -notmatch '^http://127[.]0[.]0[.]1:[0-9]{1,5}$') { throw 'Set vetted local paths and proxy first' }
 [Diagnostics.Process]::Start($start) | Out-Null
 ```
 
 ```bash
-env -i HOME="<PRIVATE_HOME>" PATH=/usr/bin:/bin TERM="${TERM:-dumb}" \
-  HTTP_PROXY='http://127.0.0.1:<HTTP_PORT>' HTTPS_PROXY='http://127.0.0.1:<HTTP_PORT>' \
-  NO_PROXY=localhost,127.0.0.1 CLAUDE_CONFIG_DIR='<PRECREATED_PRIVATE_CONFIG_DIR>' \
-  '<ABSOLUTE_TRUSTED_CLI>'
+(
+  cd -- '<AUDITED_PROJECT_DIR>' || exit 2
+  env -i HOME='<PRIVATE_HOME>' PATH=/usr/bin:/bin TERM="${TERM:-dumb}" \
+    HTTP_PROXY='http://127.0.0.1:<HTTP_PORT>' HTTPS_PROXY='http://127.0.0.1:<HTTP_PORT>' \
+    NO_PROXY=localhost,127.0.0.1 CLAUDE_CONFIG_DIR='<PRECREATED_PRIVATE_CONFIG_DIR>' \
+    '<ABSOLUTE_TRUSTED_CLI>'
+)
 ```
 
-This strips `ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN`, custom base URLs, and inherited proxy vars. Note that env cleanup does not override project-level settings, managed policies, OS credential stores, or child-process sockets — audit those separately.
+This strips `ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN`, custom base URLs, and inherited proxy vars. Note that env cleanup does not override project-level settings, managed policies, OS credential stores, or child-process sockets — audit those separately. The Windows example supports trusted native `.exe` binaries only (never implicit PATH lookup or `.bat`/`.cmd`), and a minimal `PATH` may require explicit verification if your workflow invokes tools such as `git`.
 
 ---
 

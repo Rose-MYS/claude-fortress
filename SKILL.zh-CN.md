@@ -21,11 +21,11 @@ description: Claude Fortress 完整中文版 Skill 入口。规划、只读巡�
    - A 档离线盘点与已批准的 B 档步骤一口气推进，仅在**缺关键决策 / 到达 C 档确认点 / 需用户本人操作**时停下。
 4. **跨会话状态复用原则**：A 档只在对话输出脱敏摘要；经 B 档批准后，长任务可按 [assets/session-state.example.json](assets/session-state.example.json) 保存脱敏状态，但**只复用事实与证据引用，绝不自动复用历史 B/C 档批准**；换设备、换网络、换配置代际或中断恢复后必须重新核对实际状态。
 5. **新手交互流程图引导**：当用户表达“不太会用 Agent / 想先看全貌 / 不知道选哪条路 / 不知道下一步怎么问”时，主动提示用户直接用浏览器打开纯离线单文件 [assets/interactive-guide.html](assets/interactive-guide.html)（只在本地打开才离线；复制的是准备请求，不是批准，勾选不是证据），同时在对话中用大白话逐轮带走。
-6. **上线前用户本机自验强制提醒（铁律）**：本 Skill 的脚本与规则是通用参数化模板，不替任何用户的实际机器担保。在任何路线进入 S2（首次接触 Claude）之前，Agent **必须主动提醒并引导用户在自己的机器上完成亲自检查**：
-   - **冷启动自检**：网关/主机/VM 完全关机重启后，在代理尚未拉起前确认默认阻断生效、无直连泄漏；
-   - **热启动与重载自检**：网关重启、规则重载失败、网络/TUN 切换或休眠唤醒后，确认防护不失效且新建管理通道（如新开 SSH）可达；
-   - **负向断网自检**：主动阻断上游代理入口（路线 B/A2/C2）或故意传错期望 IP（路线 A1），确认不会回退直连；
-   - **泄漏与状态复核**：独立核对 DNS、IPv6、WebRTC 与配置一致性。**未在用户本机完成上述自检前，明确提醒用户不要接入正式账号。**
+6. **上线前用户本机自验强制提醒（铁律）**：本 Skill 的脚本与规则是通用参数化模板，不替任何用户的实际机器担保。在任何路线进入 S2（首次接触 Claude）之前，Agent **必须主动提醒并引导用户在自己的机器上完成亲自检查**（按路线实际能力边界适用，详见 `references/01-route-selection-and-preflight.md` 路线适用表）：
+   - **冷启动自检（路线 A2/B/C2）**：网关/主机/VM 完全关机重启后，在代理尚未拉起前确认默认阻断生效、无直连泄漏（路线 A1 无 OS 级 Fail-Closed，改为验证代理未监听时启动器拒绝拉起）；
+   - **热启动与重载自检（路线 A2/B/C2）**：网关重启、规则重载失败、网络/TUN 切换或休眠唤醒后，确认防护不失效且新建管理通道（如新开 SSH）可达；
+   - **负向断网自检**：主动阻断上游代理入口（路线 B/A2/C2）或故意传错期望 IP / 停掉本地代理端口（路线 A1），确认不会回退直连；
+   - **泄漏与状态复核**：独立核对 DNS、IPv6、WebRTC（仅浏览器适用）与配置一致性。**未在用户本机完成上述自检前，明确提醒用户不要接入正式账号。**
 
 ---
 
@@ -60,8 +60,8 @@ description: Claude Fortress 完整中文版 Skill 入口。规划、只读巡�
 | 任务 / 路线 | 必读顺序 | 所需脚本 / 模板 | 停止与完成条件 |
 |---|---|---|---|
 | **首次选型与体检** | [01-route-selection-and-preflight.md](references/01-route-selection-and-preflight.md) | `assets/session-state.example.json` | 选定路线并完成 S0 离线盘点 |
-| **路线 A1 / A2（本机）** | `01` → [02-route-a-local-and-fingerprint.md](references/02-route-a-local-and-fingerprint.md) | — | A1 明确标为应用层分流；A2 完成负向断网验证 |
-| **路线 B（VM 堡垒，推荐）** | `01` → [03-route-b-vm-openwrt-fortress.md](references/03-route-b-vm-openwrt-fortress.md) → [route-b-windows-operations.md](references/route-b-windows-operations.md) | `assets/openwrt-vm-gateway.nft.tmpl`、`assets/openwrt-claude-fortress.init`、`assets/openwrt-claude-fortress.sysctl.conf`、`assets/host-clash-vmnat-bypass.yaml`、`scripts/route-b-common.ps1`、`scripts/guest-egress-guard.ps1`、`scripts/claude-env-check.ps1`、`scripts/guest-claude-gate.ps1` | 通用参数化模板；上线前须在用户本机亲自完成冷启动、热启动/重载与入口失效自检，强制隔离不由脚本担保 |
+| **路线 A1 / A2（本机）** | `01` → [02-route-a-local-and-fingerprint.md](references/02-route-a-local-and-fingerprint.md) | `scripts/route-a1-browser-launcher.py`、`scripts/route-a1-browser-session.mjs`、`assets/route-a1-nodes.example.json` | A1 明确标为应用层分流（Web/CLI 分组件独立采证）；A2 完成负向断网验证 |
+| **路线 B（VM 堡垒，推荐）** | `01` → [03-route-b-vm-openwrt-fortress.md](references/03-route-b-vm-openwrt-fortress.md) → [route-b-windows-operations.md](references/route-b-windows-operations.md) | `assets/openwrt-vm-gateway.nft.tmpl`、`assets/openwrt-claude-fortress.init`、`assets/openwrt-claude-fortress.sysctl.conf`、`assets/host-clash-vmnat-bypass.yaml`、`scripts/route-b-common.ps1`、`scripts/guest-gpo-setup.ps1`、`scripts/guest-egress-guard.ps1`、`scripts/claude-env-check.ps1`、`scripts/guest-claude-gate.ps1` | 通用参数化模板；上线前须在用户本机亲自完成冷启动、热启动/重载与入口失效自检，强制隔离不由脚本担保 |
 | **路线 C（远程 VPS）** | `01` → [04-route-c-vps-devbox.md](references/04-route-c-vps-devbox.md) | — | 区分 C1 原生出口和 C2 代理默认拒绝；核对带外控制台、新建 SSH 和独立出口证据 |
 | **账号、订阅与申诉参考** | [05-account-payment-and-sop.md](references/05-account-payment-and-sop.md) | — | 仅在用户显式询问时进入，全部操作由用户本人执行 |
 | **故障排查与本地清理** | [07-troubleshooting-and-cleanup.md](references/07-troubleshooting-and-cleanup.md) | — | 建立统一时间戳事故时间线；清理必须先备份+哈希核对 |

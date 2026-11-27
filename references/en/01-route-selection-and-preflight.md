@@ -47,4 +47,17 @@ The Agent collects facts using local read-only commands and prints a desensitize
 1. **Cold Boot Test**: Power off and cold-boot the gateway/VM; verify via WAN capture and counters that zero unauthorized outbound traffic leaves before the proxy/TUN starts.
 2. **Warm Reboot / Reload & Entry-Block Drill**: Test gateway reboot, reload failure, sleep/resume, and a time-limited upstream entry block (**Tier-C**, preserving and verifying a **brand-new management SSH connection**); confirm no fallback to direct egress and full recovery on expiry.
 
-> **S2 Transition**: Only when all applicable S1 positive and negative evidence items are `pass` (never `unknown` or `not_run`) should the Agent present a **Tier-C confirmation card** for the user to decide whether to enter S2 (first contact with official services).
+### 3.3 Route & Component S1→S2 Applicability Matrix
+
+> Documented `not_applicable` is allowed only where a route/component genuinely lacks that layer (e.g. A1 has no TUN/gateway; CLI has no WebRTC). **Never mark an unchecked applicable item as `not_applicable` or `pass`.** Under A1, Web and CLI are gated independently — passing Web S1 never authorizes launching CLI (and vice versa).
+
+| Check Item | A1 (Web Fingerprint Browser) | A1 (CLI Clean Subprocess) | A2 / B / C2 (OS / Gateway) | C1 (Native VPS) |
+|---|---|---|---|---|
+| **Dual Neutral IPv4 Egress** | Required (via node proxy port) | Required (via HTTP/mixed port) | Required (TUN + explicit proxy) | Required (native egress) |
+| **IPv6 Blocking / WAN Capture** | `not_applicable` (app-level; disable IPv6 in proxy & note kernel probe boundary) | `not_applicable` (app-level) | Required | Per host policy |
+| **Remote DNS / No Direct Leak** | Required (`--host-resolver-rules` + proxy logs) | Required (proxy DNS logs) | Required (with gateway WAN check) | Required (remote resolver) |
+| **WebRTC No-Leak Probe** | Required (zero ICE candidates in profile) | `not_applicable` | Required (if browser used) | `not_applicable` (no browser) |
+| **Cold Boot / Reload / Entry-Block Fail-Closed** | App-level equivalent: refuse launch on proxy down/wrong IP; outage aborts new navigation | App-level equivalent: wrong IP / empty proxy fails probe + launcher path checks | Required (with brand-new SSH check) | `not_applicable` (native contract) |
+| **Multi-Window Stability** | Recommended (required before production account) | Recommended (required before production account) | Required | Required |
+
+> **S2 Transition**: Only when all **applicable** S1 positive and negative evidence items for the target route and component are `pass` (never `unknown` or `not_run`) should the Agent present a **Tier-C confirmation card** for the user to decide whether to enter S2 (first contact with official services).

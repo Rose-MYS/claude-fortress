@@ -1010,20 +1010,20 @@
             id: 'B-2', stage: '搭建 1/4', title: '先建隔离网段与 OpenWrt 默认拒绝网关',
             sub: '先关门再放人：加载含 input/output/forward 的独占 nftables 规则',
             tier: 'C', actor: '共同确认',
-            summary: '创建 VMware 专用 LAN Segment（VM-Egress-Isolated）并部署轻量 OpenWrt 网关；停用网关 DNS 转发，加载独占 nftables 模板（先阻断 IPv6，再开启 IPv4 转发），并在宿主机留好应急描述副本。',
-            warn: '必须先建隔离网段与默认拒绝网关，再接入客机；只在专用网关使用手册的持久化加载流程；不全局清空规则。',
-            done: ['OpenWrt 通过 nft -c 语法校验并加载生效', 'IPv6 转发永久关闭且无网关本机 DNS 转发', '宿主机已备份网关应急描述文件'],
-            files: ['references/03-route-b-vm-openwrt-fortress.md', 'assets/openwrt-vm-gateway.nft.tmpl'],
+            summary: '创建 VMware 专用 LAN Segment（VM-Egress-Isolated）并部署轻量 OpenWrt 24.10 网关（免 qemu-img 建盘 + 串口管理）；先停用禁用 fw4、用 UCI 解除 eth0 桥接并配双静态网口，再加载三件套与独占 nftables 模板。',
+            warn: '必须先建隔离网段与默认拒绝网关再接入客机；fw4 stop 会清空所有 nft 表，务必先停 fw4 再启 claude-fortress；查看计数器用 nft list counters table inet vm_gate。',
+            done: ['OpenWrt 通过 nft -c 语法校验、损坏规则 reload 时 ip_forward 降为 0', 'IPv6 转发关闭、fw4 已禁用且重启后 inet vm_gate 自动加载', '宿主机已备份网关应急描述文件'],
+            files: ['references/03-route-b-vm-openwrt-fortress.md', 'assets/openwrt-vm-gateway.nft.tmpl', 'assets/openwrt-claude-fortress.init', 'assets/openwrt-claude-fortress.sysctl.conf'],
             prompt: '我准备进入 claude-fortress 路线 B 阶段 1：搭建 VMware 隔离网段与 OpenWrt 默认拒绝网关。请先读 references/03-route-b-vm-openwrt-fortress.md 和 assets/openwrt-vm-gateway.nft.tmpl，给我出一份 C 档确认单和占位符核对清单（不要写入真实敏感信息），等我确认后再逐步执行。'
           },
           {
             id: 'B-3', stage: '搭建 2/4', title: '离线准备 Windows 客机与 GPO 白名单',
             sub: '唯一网卡接隔离网段，配置三配置默认阻断 + 守护脚本',
             tier: 'C', actor: '共同确认',
-            summary: '新建单网卡 Windows 11 客机接入隔离网段，通过离线介质安装基础工具与 Clash Verge，配置本地组策略（GPO）默认阻断入/出站并仅放行 6 条最小白名单，部署 guest-egress-guard.ps1 校验。',
+            summary: '新建单网卡 Windows 11 客机接入隔离网段，离线装好代理核心与 OpenSSH，用 guest-gpo-setup.ps1 先 DryRun 预览再一键生成 3 Profile 默认阻断 + 6 条精确内部 Name 的 GPO 白名单（含自动备份回滚），再用 guest-egress-guard.ps1 核验。',
             warn: '任何已有 Claude 认证态的客机严禁接回普通 NAT；切记保留 DHCP 广播 255.255.255.255。',
-            done: ['客机仅有一块物理网卡且位于隔离网段', 'guest-egress-guard.ps1 -Status 返回 Policy=OK 且 Transport=OK'],
-            files: ['references/03-route-b-vm-openwrt-fortress.md', 'scripts/guest-egress-guard.ps1'],
+            done: ['客机仅有一块物理网卡且位于隔离网段', 'guest-gpo-setup.ps1 Apply 已留备份且 guest-egress-guard.ps1 -Status 通过'],
+            files: ['references/03-route-b-vm-openwrt-fortress.md', 'scripts/guest-gpo-setup.ps1', 'scripts/guest-egress-guard.ps1'],
             prompt: '请按 claude-fortress 路线 B 阶段 2-3，指导我在隔离网段内准备 Windows 客机并部署 GPO 默认阻断防火墙与 scripts/guest-egress-guard.ps1。先列出需要我核对的网卡名、代理核心路径和参数，出具 C 档确认单。'
           },
           {
@@ -1067,44 +1067,44 @@
         desc: '零虚拟机开销，适合内存紧张且只需要 Web + Claude Code 的用户：一节点一独立浏览器环境（自动对齐语言/时区/DNS），CLI 用干净子进程门控启动；不建议宿主机裸装 Claude Desktop。',
         steps: [
           {
-            id: 'A1-1', stage: 'S0 离线盘点', title: '确认边界与本地代理端口',
-            sub: '检查本地 HTTP/mixed 代理端口与现有环境变量，不发外网请求',
+            id: 'A1-1', stage: 'S0 离线盘点', title: '确认边界与本地代理监听',
+            sub: '离线核查本地 HTTP/mixed 监听与配置声明协议，以及终端环境变量（只展示脱敏状态）',
             tier: 'A', actor: 'Agent 执行',
-            summary: '由 Agent 离线检查当前 OS、已安装的代理客户端本地监听端口（注意：Claude Code 官方不支持直接走纯 SOCKS，须提供 HTTP/mixed 端口）及当前终端环境变量。',
+            summary: '由 Agent 离线检查当前 OS、已安装代理客户端的本地监听与配置声明协议（Claude Code 不接受纯 SOCKS，须提供 HTTP/mixed 端口）及当前终端环境变量名与脱敏状态，不发外网请求。',
             warn: '先明确认知：路线 A1 是应用层分流，不是 OS 级 Fail-Closed，且不建议在宿主机安装 Claude Desktop。',
-            done: ['确认存在可用的本地 HTTP/mixed 代理端口', '明确排除宿主机 Claude Desktop 裸装'],
+            done: ['确认存在本地 HTTP/mixed 监听与声明协议（功能可用性留到 S1 测）', '明确排除宿主机 Claude Desktop 裸装'],
             files: ['references/01-route-selection-and-preflight.md', 'references/02-route-a-local-and-fingerprint.md'],
-            prompt: '我想走 claude-fortress 的路线 A1（指纹浏览器 + Claude Code 轻量隔离）。请先做 S0 离线盘点，帮我核查本地 HTTP/mixed 代理端口与终端环境变量，不要发外部请求。'
+            prompt: '我想走 claude-fortress 的路线 A1（指纹浏览器 + Claude Code 轻量隔离）。请先做 S0 离线盘点，帮我核查本地 HTTP/mixed 代理监听与终端环境变量名/脱敏状态，不要发外部请求。'
           },
           {
-            id: 'A1-2', stage: 'Web 端隔离', title: '配置「一节点一独立浏览器」与属性自动联动',
-            sub: '每个节点独立数据目录隔离 Cookie，启动时自动对齐语言/时区/DNS',
+            id: 'A1-2', stage: 'Web 端隔离', title: '配置「一节点一独立浏览器」与防泄露启动器',
+            sub: '稳定节点 ID 绑定独立 user-data-dir 与独占端口；CDP 注入时区、双锁 WebRTC、远程 DNS',
             tier: 'B', actor: '共同确认',
-            summary: '为 Claude 准备独立指纹浏览器环境（作者建议：搭建指纹浏览器等前期工具优先用 GPT / Codex 协助）。采用一节点一独立 user-data-dir 彻底隔离 Cookie，启动时按出口节点自动联动语言、时区与远程 DNS，禁用代理失败回退直连。',
-            warn: '严禁开启代理失效自动回退直连；探测失败或出口偏离预期时必须拒绝拉起浏览器。',
-            done: ['独立浏览器 Profile 与日常浏览器完全隔离', '禁用 WebRTC 泄露、启用远程 DNS、对齐出口时区与语言'],
-            files: ['references/02-route-a-local-and-fingerprint.md'],
-            prompt: '请按 claude-fortress 的 references/02-route-a-local-and-fingerprint.md，帮我核对「一节点一独立指纹浏览器（自动联动语言/时区/DNS）」的配置检查清单，并指出最容易漏掉的泄露点。'
+            summary: '参考内置脚本 route-a1-browser-launcher.py 准备独立浏览器环境（作者建议：搭建前期工具优先用 GPT / Codex 协助）。每个稳定节点绑定独立 user-data-dir 与独占代理端口，注意 Windows Chrome 136+ 的 CDP 目录校验、CDP 时区注入与 WebRTC 双锁。',
+            warn: '严禁多节点共用同一端口随意切出口；探测失败、错 IP 或目录错绑时必须拒绝拉起，绝不静默回退直连。',
+            done: ['独立 Profile 与日常浏览器完全隔离并完成节点绑定', '核对 WebRTC 双锁、远程 DNS、CDP 时区读回与断代理拒绝直连'],
+            files: ['references/02-route-a-local-and-fingerprint.md', 'scripts/route-a1-browser-launcher.py', 'assets/route-a1-nodes.example.json'],
+            prompt: '请按 claude-fortress 的 references/02-route-a-local-and-fingerprint.md，帮我核对「一节点一独立浏览器」的配置清单与 Windows Chrome 6 个常见实机坑点。'
           },
           {
-            id: 'A1-3', stage: 'CLI 端隔离', title: '部署 Claude Code 干净子进程门控启动脚本',
-            sub: '清理继承代理变量 → 双中性站点校验 IP → 注入隔离配置目录启动',
-            tier: 'B', actor: 'Agent 执行',
-            summary: '按你的系统（PowerShell 或 Bash）生成干净子进程封装脚本：先清空继承的大小写代理变量与 ANTHROPIC_BASE_URL，用双中性端点验证出口 IP 匹配，再以独立 CLAUDE_CONFIG_DIR 和固定可执行路径启动。',
-            warn: '不要直接复用全局环境变量，也不要用纯 SOCKS 地址填给 Claude Code。',
-            done: ['生成本地门控启动脚本并核对路径', '故意填错期望 IP 时脚本成功拦截并退出'],
+            id: 'A1-3', stage: 'CLI 端准备', title: '分拆 B 档中性预检与 C 档干净子进程启动模板',
+            sub: '清理继承代理与凭据变量；绝不把 S1 退出码直接串联进 S2 启动',
+            tier: 'B', actor: '共同确认',
+            summary: '按你的系统（PowerShell 或 Bash）分别起草两段独立模板：B 档仅用双中性端点验证出口 IPv4（PowerShell 5.1 使用 no-proxy.invalid），C 档在获批后以独立 CLAUDE_CONFIG_DIR 和可信绝对路径启动。',
+            warn: '不要把 S1 探针退出码 0 当成启动授权，也不要把纯 SOCKS 地址填给 Claude Code；注意清理环境变量不等于切换 OS 用户。',
+            done: ['分别起草 S1 中性探针与独立的 S2/S3 启动模板', '实测错 IP 与空代理地址时探针直接中止'],
             files: ['references/02-route-a-local-and-fingerprint.md'],
-            prompt: '请拟定两张独立的卡：B 档只跑中性探针，C 档才由本人启动。说明凭据变量隔离，不串联两步。'
+            prompt: '请按 references/02-route-a-local-and-fingerprint.md 为我的系统分别起草两张独立的模板与卡片：B 档只跑中性探针，C 档才由本人启动。说明凭据变量隔离，绝不串联两步。'
           },
           {
-            id: 'A1-4', stage: 'S1-S4 验收上线', title: '中性预验收后由本人登录使用',
-            sub: '独立浏览器与 CLI 均通过中性 IP/DNS/WebRTC 校验后再进入官方页',
+            id: 'A1-4', stage: 'S1 审证 → S2/S4 本人操作', title: '分组件核验 S1 证据后再由本人进入 S2/S4',
+            sub: 'Web 与 CLI 分别核对适用 S1 证据，缺项不出 S2 确认单；登录由本人完成',
             tier: 'C', actor: '你本人做',
-            summary: '分别完成浏览器与 CLI 的 S1，WebRTC 只在浏览器验收，DNS 需要独立证据，通过后由你本人在官方页面登录使用。',
-            warn: '如未来需要使用 Claude Desktop 或需要 OS 级断网防泄露，请升级到路线 B。',
-            done: ['独立浏览器与 CLI 均通过 S1 中性验收', '本人完成官方登录'],
+            summary: '按 01 的路线适用矩阵分别核对浏览器（含 WebRTC/时区/远程 DNS）与 CLI（无 WebRTC 项）的 S1 证据；全部适用项通过后，再出具 S2 首次接触 C 档确认单，由你本人在官方页完成 S4 登录。',
+            warn: 'Web 通过不代表放行 CLI；如未来需要使用 Claude Desktop 或需要 OS 级断网防泄露，请升级到路线 B。',
+            done: ['目标组件（Web / CLI）各自的适用 S1 证据全部通过', '确认 S2 卡片后由本人完成官方登录'],
             files: ['references/01-route-selection-and-preflight.md', 'references/05-account-payment-and-sop.md'],
-            prompt: '请列出浏览器与 CLI 各自的 S1 证据清单，WebRTC 只对浏览器适用；缺项不出 S2 放行结论。'
+            prompt: '请按 01 的路线适用矩阵审计我当前的路线 A1 S1 中性证据（Web 与 CLI 分开核对）；若全部适用项均通过，再拟定 S2 首次接触 C 档确认单。'
           }
         ]
       },

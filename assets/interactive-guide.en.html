@@ -1003,9 +1003,9 @@
             id: 'B-2', stage: 'Build 1/4', title: 'Build Isolated LAN Segment & OpenWrt Gateway First',
             sub: 'Close the gate before attaching the guest; use the dedicated persistent init loader',
             tier: 'C', actor: 'Confirm Together',
-            summary: 'Create a dedicated VMware LAN Segment and deploy a dedicated OpenWrt VM. Install the zero-forwarding sysctl baseline, dedicated init loader, and nftables template with input/output/forward default-deny and named counters.',
-            warn: 'Never apply this template to a shared router or mix with fw4; keep an out-of-band serial console.',
-            done: ['Verify nft -c syntax and zero-forwarding on failure/reboot', 'Disable IPv6 forwarding and gateway DNS forwarding', 'Back up gateway descriptors and sysctl'],
+            summary: 'Create a dedicated VMware LAN Segment and deploy a dedicated OpenWrt 24.10 VM (zero-qemu-img disk + serial pipe). Stop/disable fw4 first, unbridge eth0 via UCI, then install the zero-forwarding sysctl, dedicated init loader, and nftables template.',
+            warn: 'Never apply to a shared router; fw4 stop flushes all nft tables so disable fw4 before loading claude-fortress; inspect counters via nft list counters table inet vm_gate.',
+            done: ['Verify nft -c syntax, ip_forward=0 on broken reload, and auto-load after reboot', 'Disable IPv6 forwarding, fw4, and gateway DNS forwarding', 'Back up gateway descriptors and sysctl'],
             files: ['references/en/03-route-b-vm-openwrt-fortress.md', 'assets/openwrt-vm-gateway.nft.tmpl', 'assets/openwrt-claude-fortress.init', 'assets/openwrt-claude-fortress.sysctl.conf'],
             prompt: 'Prepare a Tier-C confirmation card and placeholder checklist for claude-fortress Route B Stage 1 (VMware LAN Segment + dedicated OpenWrt persistent nftables gateway).'
           },
@@ -1013,10 +1013,10 @@
             id: 'B-3', stage: 'Build 2/4', title: 'Prepare Offline Windows Guest & GPO Whitelist',
             sub: 'Single NIC on isolated segment + 3-profile default-block GPO + Guard',
             tier: 'C', actor: 'Confirm Together',
-            summary: 'Build a single-NIC Windows 11 guest on the isolated segment using verified offline media, configure 3-profile default-block GPO with the 6 exact CG-Managed-* rules, and deploy protected scripts under %ProgramData%\\ClaudeFortress.',
+            summary: 'Build a single-NIC Windows 11 guest on the isolated segment using verified offline media, preview and apply 3-profile default-block GPO + 6 exact CG-Managed-* rules via guest-gpo-setup.ps1 (with automatic backup/rollback), and verify with guest-egress-guard.ps1.',
             warn: 'Never attach an authenticated guest to ordinary NAT; preserve required DHCP broadcast 255.255.255.255.',
-            done: ['Single guest NIC on isolated segment verified', 'Protected ACLs and private config JSON verified', 'guest-egress-guard.ps1 -Status passes'],
-            files: ['references/en/03-route-b-vm-openwrt-fortress.md', 'references/en/route-b-windows-operations.md', 'assets/route-b-config.example.json', 'scripts/guest-egress-guard.ps1'],
+            done: ['Single guest NIC on isolated segment verified', 'Protected ACLs, private config JSON, and guest-gpo-setup.ps1 backup verified', 'guest-egress-guard.ps1 -Status passes'],
+            files: ['references/en/03-route-b-vm-openwrt-fortress.md', 'references/en/route-b-windows-operations.md', 'assets/route-b-config.example.json', 'scripts/guest-gpo-setup.ps1', 'scripts/guest-egress-guard.ps1'],
             prompt: 'Prepare a Tier-C confirmation card for claude-fortress Route B Stage 2 (offline Windows guest, GPO CG-Managed-* rules, protected ACLs, and private config placeholders).'
           },
           {
@@ -1060,44 +1060,44 @@
         desc: 'Zero VM overhead for Web + Claude Code CLI only: per-node isolated browser profiles with auto-matched locale/timezone/DNS, plus a clean CLI launcher. Not OS Fail-Closed; do not install bare-metal Claude Desktop on the host.',
         steps: [
           {
-            id: 'A1-1', stage: 'S0 Offline Inventory', title: 'Confirm Boundaries & Local HTTP/Mixed Proxy Port',
-            sub: 'Verify HTTP/mixed local port (CLI does not accept raw SOCKS) with zero network calls',
+            id: 'A1-1', stage: 'S0 Offline Inventory', title: 'Confirm Boundaries & Local Proxy Listener',
+            sub: 'Verify HTTP/mixed listener & declared protocol plus desensitized shell env names offline',
             tier: 'A', actor: 'Agent',
-            summary: 'Inspect OS, local proxy HTTP/mixed listener port, and inherited shell env vars offline.',
+            summary: 'Inspect OS, local proxy HTTP/mixed listener and declared protocol (CLI does not accept raw SOCKS), and inherited shell env var names/desensitized status offline.',
             warn: 'A1 is app-level separation only (not OS Fail-Closed); avoid bare-metal Claude Desktop on the host.',
-            done: ['Confirmed local HTTP/mixed proxy port', 'Confirmed Web + CLI only scope'],
+            done: ['Confirmed local HTTP/mixed listener & declared protocol (functional check waits for S1)', 'Confirmed Web + CLI only scope'],
             files: ['references/en/01-route-selection-and-preflight.md', 'references/en/02-route-a-local-and-fingerprint.md'],
-            prompt: 'Using claude-fortress Route A1 S0, run an offline read-only inventory of my local HTTP/mixed proxy ports and shell proxy environment variables.'
+            prompt: 'Using claude-fortress Route A1 S0, run an offline read-only inventory of my local HTTP/mixed proxy listeners and desensitized shell proxy env var names.'
           },
           {
-            id: 'A1-2', stage: 'Web Isolation', title: 'Per-Node Isolated Fingerprint Browser (Auto-Match)',
-            sub: 'One user-data-dir per node; auto-align locale, timezone & remote DNS',
+            id: 'A1-2', stage: 'Web Isolation', title: 'Per-Node Isolated Browser & Leak-Hardened Launcher',
+            sub: 'Bind stable node ID to dedicated user-data-dir & port; CDP timezone, WebRTC dual-lock, remote DNS',
             tier: 'B', actor: 'Confirm Together',
-            summary: 'Set up an isolated fingerprint browser profile (Author tip: prefer GPT / Codex when building early browser/proxy wrappers). Isolate cookies per node, auto-align locale/timezone/remote DNS, and disable direct fallback.',
-            warn: 'Refuse to launch if probe fails or egress drifts; never silently fall back to direct egress.',
-            done: ['Dedicated profile isolated from daily browser', 'WebRTC disabled/proxied, remote DNS enabled, direct fallback off'],
-            files: ['references/en/02-route-a-local-and-fingerprint.md'],
-            prompt: 'Walk me through the Route A1 per-node fingerprint browser checklist from references/en/02-route-a-local-and-fingerprint.md and highlight common leak points.'
+            summary: 'Set up an isolated browser environment using scripts/route-a1-browser-launcher.py as reference (Author tip: prefer GPT / Codex when building early browser/proxy wrappers). Mind the 6 Windows Chrome/Edge gotchas (CDP default-dir check, CDP timezone override, WebRTC dual-lock).',
+            warn: 'Do not share one mixed port across nodes and switch upstream mid-session; refuse to launch on probe failure, IP drift, or profile mismatch.',
+            done: ['Dedicated profile isolated & persistently bound to node ID', 'Verified WebRTC dual-lock, remote DNS, CDP timezone readback, and outage abort'],
+            files: ['references/en/02-route-a-local-and-fingerprint.md', 'scripts/route-a1-browser-launcher.py', 'assets/route-a1-nodes.example.json'],
+            prompt: 'Walk me through the Route A1 per-node browser checklist and the 6 Windows Chrome/Edge gotchas in references/en/02-route-a-local-and-fingerprint.md.'
           },
           {
-            id: 'A1-3', stage: 'CLI Prep', title: 'Separate Neutral Preflight & Clean Subprocess Launcher',
+            id: 'A1-3', stage: 'CLI Prep', title: 'Separate Tier-B Neutral Preflight & Tier-C Clean Launcher',
             sub: 'Strip inherited proxy/API env vars; never auto-chain S1 into S2 launch',
             tier: 'B', actor: 'Confirm Together',
-            summary: 'Prepare the S1 neutral dual-endpoint IPv4 probe script (using no-proxy.invalid on PowerShell 5.1) and a separate S2/S3 clean-environment launcher stripping ANTHROPIC_API_KEY and inherited proxy vars.',
-            warn: 'Do not chain S1 exit 0 directly into automatic Claude launch; verify mismatch rejection locally.',
-            done: ['S1 probe script and separate S2/S3 launcher drafted', 'Mismatch test cleanly aborts'],
+            summary: 'Draft two separate templates for your OS: a Tier-B dual-endpoint IPv4 probe (using no-proxy.invalid on PowerShell 5.1) and a separate Tier-C clean-environment launcher stripping ANTHROPIC_API_KEY and inherited proxy vars.',
+            warn: 'Do not chain S1 exit 0 directly into automatic Claude launch; cleaning env vars does not switch OS users.',
+            done: ['Separate S1 probe and S2/S3 launcher templates drafted', 'Mismatch and empty-proxy tests cleanly abort'],
             files: ['references/en/02-route-a-local-and-fingerprint.md'],
-            prompt: 'Draft the separate S1 neutral check and S2/S3 clean-subprocess launcher templates for my OS based on references/en/02-route-a-local-and-fingerprint.md.'
+            prompt: 'Draft the separate Tier-B S1 neutral check and Tier-C S2/S3 clean-subprocess launcher templates for my OS based on references/en/02-route-a-local-and-fingerprint.md — do not chain them.'
           },
           {
-            id: 'A1-4', stage: 'S1-S4 Go-Live', title: 'Neutral Verification & User Login',
-            sub: 'Verify browser + CLI neutral evidence before opening official pages',
+            id: 'A1-4', stage: 'S1 Audit → S2/S4 User Actions', title: 'Per-Component S1 Audit Before S2/S4 Login',
+            sub: 'Audit browser and CLI S1 evidence separately before drafting S2 card; user logs in directly',
             tier: 'C', actor: 'User Only',
-            summary: 'Confirm neutral IPv4, DNS, and browser WebRTC checks pass, then review Tier-C card and log in directly on official pages.',
-            warn: 'Upgrade to Route B if you later need Claude Desktop or OS-level Fail-Closed guarantees.',
-            done: ['Neutral checks passed in both browser and CLI', 'User completed official login'],
+            summary: 'Audit applicable S1 evidence separately for browser (IPv4/DNS/WebRTC/timezone) and CLI (no WebRTC) using the route matrix in 01; only when all applicable items pass, review the S2 Tier-C card and complete S4 login directly on official pages.',
+            warn: 'Web pass never authorizes CLI launch. Upgrade to Route B if you need Claude Desktop or OS/gateway-level Fail-Closed boundaries (still self-verified locally).',
+            done: ['All applicable S1 checks passed for the target component (Web / CLI)', 'Reviewed S2 card and completed official login directly'],
             files: ['references/en/01-route-selection-and-preflight.md', 'references/en/05-account-payment-and-sop.md'],
-            prompt: 'Audit my Route A1 S1 neutral evidence and, if complete, draft a Tier-C confirmation card for S2 first contact.'
+            prompt: 'Audit my Route A1 S1 neutral evidence per component using the matrix in 01; if all applicable items pass, draft a Tier-C confirmation card for S2 first contact.'
           }
         ]
       },
