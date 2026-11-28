@@ -34,7 +34,7 @@ Each level includes everything below it (cumulative).
 4. **`not_applicable` is only allowed for checks the component does not require** (e.g. WebRTC for CLI, or a conditional check whose condition is `false`), and must carry a note. Marking a required check `not_applicable` makes the whole evidence **invalid** rather than skipped.
 5. **Evaluate level by level and stop at the first gap**: if one L1 check is missing, the result is L0 even if every L2 drill passed.
 6. **Expiry**: 30 days after the **oldest** capture time among the checks that count towards the level, the result is marked "expired".
-7. **Configuration generation**: if the evidence `config_sha256` differs from the current configuration hash, the result is marked "config changed" and must be re-tested.
+7. **Configuration generation**: if the current configuration hash matches neither the evidence's `config_sha256` nor any source hash, the result is marked "config changed" and must be re-tested.
 8. **Invalid evidence gets no level**: malformed files, unknown checks or missing timestamps yield errors only.
 
 ## 4. Evidence Format v3
@@ -62,11 +62,26 @@ Run on the **host or any trusted machine** (read-only, no network, writes nothin
 ```bash
 python scripts/fortress_level.py <evidence>.json
 python scripts/fortress_level.py <evidence>.json --json --current-config-sha256 <current-config-hash>
+python scripts/fortress_level.py guest.json gateway.json --json
+python scripts/fortress_level.py guest.json gateway.json --print-merged
 ```
 
 Exit codes: `0` evaluated (see the level in the output), `2` invalid evidence, `64` usage error.
 
-You can also open the offline [assets/evidence-report.html](../../assets/evidence-report.html) in a browser: drop in an evidence v3 file (optionally together with the JSON exported by the [WebRTC probe](../../assets/webrtc-probe.html), which is merged into `browser_webrtc`), and the page shows the level, every check per level, what is missing, and exports a redacted Markdown summary. It embeds the same `levels.json`, and CI verifies it matches the Python calculator on every case in [tests/fixtures/levels/cases.json](../../tests/fixtures/levels/cases.json). It also flags likely public IPs, emails, subscription links and personal paths in the evidence — a reminder only; still review before sharing.
+Open the offline [assets/evidence-report.html](../../assets/evidence-report.html) in a browser to drop or select evidence v3 files in batches. Remove individual files using their source labels. The page combines two or more files, shows the level and missing checks, and exports the merged JSON and a redacted Markdown summary. It applies any [WebRTC probe](../../assets/webrtc-probe.html) result to `browser_webrtc` after combining the files. The page embeds the same `levels.json`, and CI compares Python and the browser engine against the shared [rating cases](../../tests/fixtures/levels/cases.json) and [merge cases](../../tests/fixtures/levels/merge_cases.json). Review the evidence and any privacy warnings before sharing.
+
+### Combining Evidence Files
+
+1. Use at least two v3 evidence files with the same `route` and `component`. A mismatch returns `cannot merge: route/component mismatch`. An input with `sources` returns `cannot merge: input is already merged`. A duplicate `request_id` returns `cannot merge: duplicate request_id`.
+2. Combine `browser_used` and `remote_management` separately. Each condition is `true` if any source sets it to `true`.
+3. For each check, take the worst status in this order: `fail` > `unknown` > `user_attested` > `pass`. With none of those statuses present, use `not_applicable` if recorded, or `not_run` if every record is `not_run`. For the same status, use the earliest `captured_utc`. Missing timestamps sort last and ties use the first `request_id` in sorted order. The `not_applicable` note comes from the first such record by `request_id`.
+4. Preserve the selected record's `method`, `tool`, `raw_sha256` and `captured_utc`. Prefix its `note` with `[from <target_alias>] `.
+5. Sort `sources` by `request_id`. Each entry includes `request_id`, `target_alias`, `config_sha256` and `captured_utc`. Join the source aliases in that order with `+` as the top-level `target_alias`. Sort the source config hashes, join with a newline, and hash the UTF-8 bytes with SHA-256 for the top-level `config_sha256`. Do the same for the sorted request IDs, taking the first 32 hex characters for the top-level `request_id`. Use the latest source time for `captured_utc` and break ties by sorted `request_id`. Set `level_claimed` to `null` and `private_evidence_reference` to `"<PRIVATE_EVIDENCE_PATH>"`.
+6. A current hash matching the merged hash or any source hash keeps `config_changed` at `false`. The calculator leaves its inputs untouched and `--print-merged` writes valid merged evidence to stdout.
+
+### Known Limitations
+
+Route B's Windows guest and OpenWrt gateway offline collectors can report at most `unknown` when their local IPv6 checks look clean. WAN-side packet capture is still required. L1 requires `ipv6`, which cannot be user-attested. Combining both offline outputs therefore cannot support Route B L1. The planned Tier-B neutral-probe collector must supply the missing measured evidence.
 
 ## 6. How to Talk About It
 

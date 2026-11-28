@@ -1,4 +1,5 @@
 """Cross-platform stdlib regression tests for claude-fortress (zero third-party deps)."""
+import hashlib
 import json
 import os
 import pathlib
@@ -389,11 +390,96 @@ class TestEvidenceReportPage(unittest.TestCase):
                 if not case["expect"]["valid"]:
                     self.assertTrue(any(case["expect"]["error_contains"] in e for e in js["errors"]), js["errors"])
 
+    def test_shared_merge_vectors(self):
+        mod = _load_level_module()
+        levels = json.loads((ASSETS / "levels.json").read_text(encoding="utf-8"))
+        vectors = json.loads((ROOT / "tests/fixtures/levels/merge_cases.json").read_text(encoding="utf-8"))
+        documents = {name: {**vectors["defaults"], **ev} for name, ev in vectors["documents"].items()}
+        now = mod.parse_utc(vectors["now"])
+        py_results, inputs_for_js = [], []
+        for case in vectors["cases"]:
+            with self.subTest(case=case["name"]):
+                inputs = [documents[name] for name in case["inputs"]]
+                merged, errors = mod.merge_evidence(inputs)
+                config, rating = None, None
+                if "error" in case:
+                    self.assertIsNone(merged)
+                    self.assertEqual(errors, [case["error"]])
+                else:
+                    self.assertEqual(errors, [])
+                    self.assertEqual(mod.merge_evidence(list(reversed(inputs))), (merged, []))
+                    ordered = sorted(inputs, key=lambda ev: ev["request_id"])
+                    self.assertEqual(merged["sources"], [
+                        {key: ev[key] for key in ("request_id", "target_alias", "config_sha256", "captured_utc")}
+                        for ev in ordered
+                    ])
+                    ids = "\n".join(ev["request_id"] for ev in ordered)
+                    hashes = "\n".join(sorted(ev["config_sha256"] for ev in inputs))
+                    self.assertEqual(merged["request_id"], hashlib.sha256(ids.encode("utf-8")).hexdigest()[:32])
+                    self.assertEqual(merged["config_sha256"], hashlib.sha256(hashes.encode("utf-8")).hexdigest())
+                    self.assertEqual(merged["target_alias"], "+".join(ev["target_alias"] for ev in ordered))
+                    self.assertEqual(merged["captured_utc"], "2026-11-28T12:00:00.005Z")
+                    self.assertEqual(merged["conditions"], {"browser_used": True, "remote_management": True})
+                    self.assertIsNone(merged["level_claimed"])
+                    self.assertEqual(merged["private_evidence_reference"], "<PRIVATE_EVIDENCE_PATH>")
+                    for cid, source in case.get("checks_from", {}).items():
+                        item = documents[source]["checks"][cid]
+                        note = f"[from {documents[source]['target_alias']}] " + item.get("note", "")
+                        self.assertEqual(merged["checks"][cid], {**item, "note": note})
+
+                    config = case["current_config"]
+                    if config == "merged":
+                        config = merged["config_sha256"]
+                    elif config in documents:
+                        config = documents[config]["config_sha256"]
+                    rating = mod.evaluate(merged, levels, now, config)
+                    self.assertTrue(rating["valid"], rating["errors"])
+                    self.assertEqual(rating["profile"], "B")
+                    self.assertEqual(rating["level"], case["level"])
+                    self.assertEqual(rating["config_changed"], case["config_changed"])
+                inputs_for_js.append({"inputs": inputs, "config": config})
+                py_results.append({"merged": merged, "errors": errors, "rating": rating})
+
+        node = shutil.which("node")
+        if node:
+            with tempfile.TemporaryDirectory() as tmp:
+                engine = pathlib.Path(tmp) / "engine.js"
+                engine.write_text(self._script("fortress-level-engine"), encoding="utf-8")
+                runner = """
+                    const FL = require(process.argv[1]);
+                    const fs = require('node:fs');
+                    const {levels, now, cases} = JSON.parse(fs.readFileSync(0, 'utf8'));
+                    const out = cases.map(({inputs, config}) => {
+                        const {merged, errors} = FL.mergeEvidence(inputs);
+                        const rating = merged ? FL.evaluate(merged, levels, FL.parseUtc(now).ms, config) : null;
+                        return {merged, errors, rating};
+                    });
+                    process.stdout.write(JSON.stringify(out));
+                """
+                res = subprocess.run([node, "-e", runner, str(engine)],
+                                     input=json.dumps({"levels": levels, "now": vectors["now"], "cases": inputs_for_js}),
+                                     capture_output=True, text=True, encoding="utf-8")
+            self.assertEqual(res.returncode, 0, res.stderr)
+            self.assertEqual(json.loads(res.stdout), py_results)
+
 
 class TestRouteBOfflineCollectors(unittest.TestCase):
     """Route B Tier-A offline collectors emit valid evidence v3 accepted by both Python and JS engines."""
 
     FX = ROOT / "tests" / "fixtures" / "verify_offline"
+    SH = shutil.which("sh")
+
+    def _openwrt(self, *args):
+        # Git for Windows can check out shell scripts with CRLF.
+        shell = [self.SH, "-o", "igncr"] if IS_WINDOWS else [self.SH]
+        return subprocess.run([*shell, str(SCRIPTS / "verify-offline-openwrt.sh"), *args],
+                              capture_output=True, text=True, encoding="utf-8")
+
+    def _guest(self, fixture, *args):
+        return subprocess.run(["powershell", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
+                               "-File", str(SCRIPTS / "verify-offline-route-b-guest.ps1"),
+                               "-FixturePath", str(fixture), *args],
+                              capture_output=True, text=True, encoding="utf-8")
 
     def _assert_v3_and_report_agree(self, data):
         mod = _load_level_module()
@@ -436,12 +522,7 @@ class TestRouteBOfflineCollectors(unittest.TestCase):
 
     @unittest.skipUnless(IS_WINDOWS, "Windows guest collector runs on PowerShell")
     def test_windows_guest_collector_pass_and_fail_fixtures(self):
-        script = SCRIPTS / "verify-offline-route-b-guest.ps1"
-        r_pass = subprocess.run(
-            ["powershell", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
-             "-File", str(script), "-FixturePath", str(self.FX / "guest_pass.json")],
-            capture_output=True, text=True, encoding="utf-8",
-        )
+        r_pass = self._guest(self.FX / "guest_pass.json")
         self.assertEqual(r_pass.returncode, 0, r_pass.stderr)
         d_pass = json.loads(r_pass.stdout)
         self._assert_v3_and_report_agree(d_pass)
@@ -450,11 +531,7 @@ class TestRouteBOfflineCollectors(unittest.TestCase):
         self.assertEqual(d_pass["checks"]["ipv6"]["status"], "unknown")
         self.assertEqual(d_pass["checks"]["app_fail_closed"]["status"], "not_applicable")
 
-        r_fail = subprocess.run(
-            ["powershell", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
-             "-File", str(script), "-FixturePath", str(self.FX / "guest_fail.json")],
-            capture_output=True, text=True, encoding="utf-8",
-        )
+        r_fail = self._guest(self.FX / "guest_fail.json")
         self.assertEqual(r_fail.returncode, 0, r_fail.stderr)
         d_fail = json.loads(r_fail.stdout)
         self._assert_v3_and_report_agree(d_fail)
@@ -462,13 +539,9 @@ class TestRouteBOfflineCollectors(unittest.TestCase):
         self.assertEqual(d_fail["checks"]["second_nic"]["status"], "fail")
         self.assertEqual(d_fail["checks"]["ipv6"]["status"], "fail")
 
-    @unittest.skipIf(IS_WINDOWS, "OpenWrt POSIX sh collector runs on Linux/macOS")
+    @unittest.skipUnless(SH, "OpenWrt fixtures require a POSIX shell")
     def test_openwrt_collector_pass_and_fail_fixtures(self):
-        script = SCRIPTS / "verify-offline-openwrt.sh"
-        r_pass = subprocess.run(
-            ["sh", str(script), "--fixture-dir", str(self.FX / "openwrt_pass")],
-            capture_output=True, text=True, encoding="utf-8",
-        )
+        r_pass = self._openwrt("--fixture-dir", str(self.FX / "openwrt_pass"))
         self.assertEqual(r_pass.returncode, 0, r_pass.stderr)
         d_pass = json.loads(r_pass.stdout)
         self._assert_v3_and_report_agree(d_pass)
@@ -477,12 +550,94 @@ class TestRouteBOfflineCollectors(unittest.TestCase):
         self.assertEqual(d_pass["checks"]["wan_capture"]["status"], "not_run")
         self.assertEqual(d_pass["checks"]["app_fail_closed"]["status"], "not_applicable")
 
-        r_fail = subprocess.run(
-            ["sh", str(script), "--fixture-dir", str(self.FX / "openwrt_fail")],
-            capture_output=True, text=True, encoding="utf-8",
-        )
+        r_fail = self._openwrt("--fixture-dir", str(self.FX / "openwrt_fail"))
         self.assertEqual(r_fail.returncode, 0, r_fail.stderr)
         d_fail = json.loads(r_fail.stdout)
         self._assert_v3_and_report_agree(d_fail)
         self.assertEqual(d_fail["checks"]["ipv6"]["status"], "fail")
         self.assertEqual(d_fail["checks"]["udp"]["status"], "fail")
+
+    @unittest.skipUnless(SH, "OpenWrt fixtures require a POSIX shell")
+    def test_openwrt_flags_protocol_agnostic_accept(self):
+        result = self._openwrt("--fixture-dir", str(self.FX / "openwrt_fail_proto_any"))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        data = json.loads(result.stdout)
+        self._assert_v3_and_report_agree(data)
+        self.assertEqual(data["checks"]["ipv6"]["status"], "unknown")
+        self.assertEqual(data["checks"]["udp"]["status"], "fail")
+        self.assertIn("fwd_udp_allow=1", data["checks"]["udp"]["note"])
+
+    @unittest.skipUnless(SH, "OpenWrt fixtures require a POSIX shell")
+    def test_openwrt_flags_chain_transfers_and_ignores_quoted_verdicts(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            fixture = pathlib.Path(tmp) / "gateway"
+            shutil.copytree(self.FX / "openwrt_pass", fixture)
+            table = fixture / "nft_vm_gate"
+            text = table.read_text(encoding="utf-8")
+            offset = text.rfind("    }")
+            rules = ('        ip protocol == tcp accept\n'
+                     '        meta l4proto tcp accept comment "jump false_alarm"\n'
+                     '        tcp sport 443 accept\n'
+                     '        counter drop comment "accept"\n'
+                     '        tcp dport 443 jump custom\n'
+                     '        goto custom\n'
+                     '        iifname "meta l4proto tcp" accept\n')
+            table.write_text(text[:offset] + rules + text[offset:], encoding="utf-8")
+            result = self._openwrt("--fixture-dir", str(fixture))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        check = json.loads(result.stdout)["checks"]["udp"]
+        self.assertEqual(check["status"], "fail")
+        self.assertIn("fwd_udp_allow=3", check["note"])
+
+    @unittest.skipUnless(SH, "OpenWrt fixtures require a POSIX shell")
+    def test_openwrt_missing_rules_emits_no_evidence(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            fixture = pathlib.Path(tmp)
+            for result in (self._openwrt("--fixture-dir", str(fixture)),
+                           self._openwrt("--rules", str(fixture / "gateway.nft"))):
+                self.assertEqual(result.returncode, 2, result.stderr)
+                self.assertEqual(result.stdout, "")
+                message, separator, path = result.stderr.strip().partition(": ")
+                self.assertEqual(message + separator, "RULES_NOT_FOUND: ")
+                self.assertEqual(pathlib.Path(path), fixture / "gateway.nft")
+
+    @unittest.skipUnless(SH, "OpenWrt fixtures require a POSIX shell")
+    def test_route_b_collector_evidence_merges_and_rates_below_l0(self):
+        guest_sample = self.FX / "guest_pass_evidence.json"
+        gateway = self._openwrt("--fixture-dir", str(self.FX / "openwrt_pass"),
+                                "--request-id", "22222222222222222222222222222222")
+        self.assertEqual(gateway.returncode, 0, gateway.stderr)
+        with tempfile.TemporaryDirectory() as tmp:
+            gateway_path = pathlib.Path(tmp) / "gateway.json"
+            gateway_path.write_text(gateway.stdout, encoding="utf-8")
+            guest_path = guest_sample
+            if IS_WINDOWS:
+                guest = self._guest(self.FX / "guest_pass.json", "-RequestId", "11111111111111111111111111111111")
+                self.assertEqual(guest.returncode, 0, guest.stderr)
+                guest_path = pathlib.Path(tmp) / "guest.json"
+                guest_path.write_text(guest.stdout, encoding="utf-8")
+                sample = json.loads(guest_sample.read_text(encoding="utf-8"))
+                fresh = json.loads(guest.stdout)
+                parse_utc = _load_level_module().parse_utc
+                parse_utc(fresh["captured_utc"])
+                fresh["captured_utc"] = sample["captured_utc"]
+                for cid, item in fresh["checks"].items():
+                    if item["captured_utc"] is not None:
+                        parse_utc(item["captured_utc"])
+                        item["captured_utc"] = sample["checks"][cid]["captured_utc"]
+                self.assertEqual(fresh, sample)
+            cmd = [sys.executable, str(SCRIPTS / "fortress_level.py"), str(guest_path), str(gateway_path)]
+            export = subprocess.run([*cmd, "--print-merged"], capture_output=True, text=True, encoding="utf-8")
+            rating = subprocess.run([*cmd, "--json"], capture_output=True, text=True, encoding="utf-8")
+        self.assertEqual(export.returncode, 0, export.stderr)
+        self.assertEqual(rating.returncode, 0, rating.stderr)
+        merged = json.loads(export.stdout)
+        self._assert_v3_and_report_agree(merged)
+        self.assertEqual(len(merged["sources"]), 2)
+        self.assertEqual(merged["checks"]["guest_policy"]["status"], "pass")
+        self.assertEqual(merged["checks"]["ipv6"]["status"], "unknown")
+        self.assertEqual(merged["checks"]["udp"]["status"], "unknown")
+        result = json.loads(rating.stdout)
+        self.assertTrue(result["valid"], result["errors"])
+        self.assertEqual(result["profile"], "B")
+        self.assertIsNone(result["level"])

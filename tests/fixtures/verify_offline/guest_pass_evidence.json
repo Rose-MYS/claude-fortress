@@ -1,0 +1,137 @@
+{
+  "schema_version": 3,
+  "request_id": "11111111111111111111111111111111",
+  "route": "B",
+  "component": "system",
+  "target_alias": "guest-route-b-pass",
+  "config_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "conditions": {
+    "browser_used": true,
+    "remote_management": true
+  },
+  "level_claimed": null,
+  "captured_utc": "2026-11-28T12:00:00Z",
+  "checks": {
+    "egress_dual": {
+      "status": "not_run",
+      "method": "",
+      "captured_utc": null,
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+    },
+    "ipv6": {
+      "status": "unknown",
+      "method": "offline_guest_nic_ipv6_binding",
+      "captured_utc": "2026-11-28T12:00:00Z",
+      "tool": "verify-offline-route-b-guest.ps1/1.0",
+      "raw_sha256": "68ce9721bc07d17ec612df0b736cefdcfab0e641e3ed6b1b71a453e6f2ddaf9a",
+      "note": "Offline guest NIC IPv6 binding disabled; combine with OpenWrt gateway IPv6 drop and WAN capture to mark pass"
+    },
+    "dns": {
+      "status": "not_run",
+      "method": "",
+      "captured_utc": null,
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+    },
+    "browser_webrtc": {
+      "status": "not_run",
+      "method": "",
+      "captured_utc": null,
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+    },
+    "cold_boot": {
+      "status": "not_run",
+      "method": "",
+      "captured_utc": null,
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+    },
+    "reload_failure": {
+      "status": "not_run",
+      "method": "",
+      "captured_utc": null,
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+    },
+    "entry_loss": {
+      "status": "not_run",
+      "method": "",
+      "captured_utc": null,
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+    },
+    "management_ssh": {
+      "status": "not_run",
+      "method": "",
+      "captured_utc": null,
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+    },
+    "stability": {
+      "status": "not_run",
+      "method": "",
+      "captured_utc": null,
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+    },
+    "wan_capture": {
+      "status": "not_run",
+      "method": "",
+      "captured_utc": null,
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+    },
+    "guest_policy": {
+      "status": "pass",
+      "method": "offline_gpo_activestore_audit",
+      "captured_utc": "2026-11-28T12:00:00Z",
+      "tool": "verify-offline-route-b-guest.ps1/1.0",
+      "raw_sha256": "68ce9721bc07d17ec612df0b736cefdcfab0e641e3ed6b1b71a453e6f2ddaf9a",
+      "note": "All 3 ActiveStore GPO profiles default-block with local merge disabled and exact 6 CG-Managed-* rules enforced"
+    },
+    "udp": {
+      "status": "not_run",
+      "method": "",
+      "captured_utc": null,
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+    },
+    "second_nic": {
+      "status": "pass",
+      "method": "offline_netadapter_topology",
+      "captured_utc": "2026-11-28T12:00:00Z",
+      "tool": "verify-offline-route-b-guest.ps1/1.0",
+      "raw_sha256": "68ce9721bc07d17ec612df0b736cefdcfab0e641e3ed6b1b71a453e6f2ddaf9a",
+      "note": "Only expected LAN/TUN adapters are Up; no unexpected second NIC detected"
+    },
+    "existing_connections": {
+      "status": "not_run",
+      "method": "",
+      "captured_utc": null,
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+    },
+    "app_fail_closed": {
+      "status": "not_applicable",
+      "method": "",
+      "captured_utc": null,
+      "tool": "",
+      "raw_sha256": null,
+      "note": "Route B is system-level; app-level launcher check does not apply"
+    }
+  },
+  "private_evidence_reference": "<PRIVATE_EVIDENCE_PATH>"
+}

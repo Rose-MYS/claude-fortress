@@ -15,7 +15,7 @@ function Get-Utf8Sha256([string]$Text) {
     $sha = [Security.Cryptography.SHA256]::Create()
     try {
         $bytes = [Text.Encoding]::UTF8.GetBytes($Text)
-        return (($sha.ComputeHash($bytes) | ForEach-Object { $_.ToString('x2') }) -join '')
+        return (($sha.ComputeHash($bytes) | ForEach-Object { $_.ToString('x2', [Globalization.CultureInfo]::InvariantCulture) }) -join '')
     } finally {
         $sha.Dispose()
     }
@@ -46,7 +46,7 @@ if ($RequestId -cnotmatch '^[a-f0-9]{32}$') {
     throw 'INVALID_REQUEST_ID'
 }
 
-$nowUtc = [DateTime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ')
+$nowUtc = [DateTime]::UtcNow.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'", [Globalization.CultureInfo]::InvariantCulture)
 $browserUsed = !$NoBrowser
 $remoteMgmt = $true
 

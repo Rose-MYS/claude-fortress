@@ -58,10 +58,19 @@ fi
 
 NOW_UTC=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
 
-# Collect raw offline facts (either from fixture dir or live OpenWrt)
+RULES_FILE="$RULES_PATH"
 if [ -n "$FIXTURE_DIR" ]; then
     [ -d "$FIXTURE_DIR" ] || die "Fixture directory not found: $FIXTURE_DIR"
     RULES_FILE="$FIXTURE_DIR/gateway.nft"
+fi
+if [ ! -f "$RULES_FILE" ] || [ ! -r "$RULES_FILE" ] ||
+    ! RULES_DIGEST=$(sha256sum 2>/dev/null < "$RULES_FILE"); then
+    die "RULES_NOT_FOUND: $RULES_FILE"
+fi
+CONFIG_SHA256=${RULES_DIGEST%% *}
+
+# Collect raw offline facts (either from fixture dir or live OpenWrt)
+if [ -n "$FIXTURE_DIR" ]; then
     IP4_FWD=$(tr -d '\r\n ' < "$FIXTURE_DIR/ip_forward")
     IP6_ALL=$(tr -d '\r\n ' < "$FIXTURE_DIR/ip6_all_fwd")
     IP6_DEF=$(tr -d '\r\n ' < "$FIXTURE_DIR/ip6_def_fwd")
@@ -70,7 +79,6 @@ if [ -n "$FIXTURE_DIR" ]; then
     FW4_ENABLED=$(tr -d '\r\n ' < "$FIXTURE_DIR/fw4_enabled")
     FORTRESS_ENABLED=$(tr -d '\r\n ' < "$FIXTURE_DIR/fortress_enabled")
 else
-    RULES_FILE="$RULES_PATH"
     IP4_FWD=$(cat /proc/sys/net/ipv4/ip_forward 2>/dev/null || printf 'unknown')
     IP6_ALL=$(cat /proc/sys/net/ipv6/conf/all/forwarding 2>/dev/null || printf 'absent')
     IP6_DEF=$(cat /proc/sys/net/ipv6/conf/default/forwarding 2>/dev/null || printf 'absent')
@@ -88,12 +96,6 @@ else
     fi
 fi
 
-if [ -f "$RULES_FILE" ]; then
-    CONFIG_SHA256=$(sha256sum "$RULES_FILE" | awk '{print tolower($1)}')
-else
-    CONFIG_SHA256="0000000000000000000000000000000000000000000000000000000000000000"
-fi
-
 # Evaluate desensitized offline invariants
 HAS_VM_GATE=0
 if printf '%s\n' "$NFT_TABLES" | grep -Eq '^[[:space:]]*table inet vm_gate[[:space:]]*$'; then
@@ -107,11 +109,21 @@ fi
 DROP_CHAINS=$(printf '%s\n' "$NFT_VM_GATE" | grep -Ec 'type filter hook (input|output|forward) .*policy drop;') || true
 IPV6_DROPS=$(printf '%s\n' "$NFT_VM_GATE" | grep -Ec 'meta nfproto ipv6 .*drop') || true
 
-# Check forward chain for any unexpected UDP accept rule
+# The live listing prints one rule per line. Ignore quoted names and comments
+# before looking for a verdict or a positive TCP restriction.
 FWD_UDP_ALLOW=$(printf '%s\n' "$NFT_VM_GATE" | awk '
-    /chain forward[[:space:]]*\{/ { in_fwd=1; next }
     in_fwd && /^[[:space:]]*\}/ { in_fwd=0; next }
-    in_fwd && /udp/ && /accept/ { count++ }
+    /^[[:space:]]*chain forward[[:space:]]*\{/ { in_fwd=1; next }
+    /^[[:space:]]*type filter hook forward[[:space:]]/ { in_fwd=1; next }
+    in_fwd {
+        gsub(/"([^"\\]|\\.)*"/, "<quoted>")
+        sub(/[[:space:]]+comment[[:space:]]+<quoted>[[:space:]]*$/, "")
+        if ($0 ~ /(^|[[:space:]])(jump|goto)[[:space:]]+[^[:space:]]+[[:space:]]*$/ ||
+            ($0 ~ /(^|[[:space:]])accept[[:space:]]*$/ &&
+             $0 !~ /(^|[[:space:]])(tcp[[:space:]]+(dport|sport|sequence|ackseq|doff|reserved|flags|window|checksum|urgptr|option)|((meta[[:space:]]+)?l4proto|ip[[:space:]]+protocol|ip6[[:space:]]+nexthdr)[[:space:]]+(==[[:space:]]+)?tcp)([[:space:]]|$)/)) {
+            count++
+        }
+    }
     END { print count+0 }
 ')
 
@@ -141,10 +153,10 @@ fi
 # 2. UDP forward offline check (fail if forward chain lacks policy drop or allows UDP; unknown if offline clean)
 if [ "$HAS_VM_GATE" -eq 1 ] && [ "$DROP_CHAINS" -ge 3 ] && [ "$FWD_UDP_ALLOW" -eq 0 ] && [ "$HAS_FW4_TABLE" -eq 0 ] && [ "$FW4_ENABLED" = "0" ]; then
     UDP_STATUS="unknown"
-    UDP_NOTE="Offline OpenWrt forward chain has policy drop, zero UDP forward allow rules, and fw4 disabled; confirm with live UDP probe for pass"
+    UDP_NOTE="Offline OpenWrt forward chain has policy drop, zero rules that may allow UDP, and fw4 disabled; confirm with live UDP probe for pass"
 else
     UDP_STATUS="fail"
-    UDP_NOTE="OpenWrt UDP/forward invariant failed: vm_gate=${HAS_VM_GATE} drop_chains=${DROP_CHAINS} fwd_udp_allow=${FWD_UDP_ALLOW} fw4_table=${HAS_FW4_TABLE} fw4_enabled=${FW4_ENABLED}"
+    UDP_NOTE="OpenWrt UDP/forward invariant failed: vm_gate=${HAS_VM_GATE} drop_chains=${DROP_CHAINS} fwd_udp_allow=${FWD_UDP_ALLOW} (accept without a TCP restriction or unverified jump/goto) fw4_table=${HAS_FW4_TABLE} fw4_enabled=${FW4_ENABLED}"
 fi
 
 # 3. Gateway baseline summary attached as note on wan_capture (kept not_run since WAN capture is Tier-C)
