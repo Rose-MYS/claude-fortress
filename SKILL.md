@@ -18,6 +18,7 @@ description: Plan, run read-only inventories, build, and maintain isolated Claud
 3. **Low Friction**:
    - Inspect facts that offline read-only commands can answer (OS build, NIC names, paths) instead of asking the user.
    - Batch missing decisions (≤ 3 questions per turn).
+   - **Delegated Replies Never Bind a Route**: Replies like *"up to you"*, *"whatever is easiest"*, or *"you decide"* are **neither an explicit route choice nor acceptance of a default**. Keep the route unconfirmed, present one concrete recommendation, and require explicit user acceptance/rejection before binding a route.
    - Advance Tier-A offline checks and approved Tier-B plans continuously; pause only when **a key decision is missing**, **a Tier-C gate is reached**, or **the user must act in a browser/official page**.
 4. **Cross-Session State Reuse**: Tier-A outputs desensitized summaries in chat only. After Tier-B approval, long tasks may persist desensitized facts using [assets/session-state.example.json](assets/session-state.example.json) — **reuse facts and evidence pointers only, NEVER auto-reuse prior Tier-B/C approvals**. Re-verify actual state after any device, network, config-generation, or reconnect change.
 5. **Interactive Flowchart Guidance for Beginners**: When the user says they are new to Agents, want an overview, or don't know what to ask next, point them to open [assets/interactive-guide.en.html](assets/interactive-guide.en.html) (or [assets/interactive-guide.html](assets/interactive-guide.html) for Chinese) directly in a local browser (offline only when opened locally; copied prompts are preparation requests, not approvals, and checkboxes are not evidence), while guiding them in plain language in chat.
@@ -25,7 +26,7 @@ description: Plan, run read-only inventories, build, and maintain isolated Claud
    - **Cold Boot Check (Routes A2/B/C2)**: Power off and cold-boot the gateway/VM/host; confirm default-deny holds with zero direct leak before the proxy/TUN starts. (Route A1 has no OS Fail-Closed; verify the launcher refuses to start when the proxy port is down.)
    - **Warm Reboot & Reload Check (Routes A2/B/C2)**: Test gateway reboot, rule reload failure, host TUN/proxy toggles, or sleep/resume; confirm boundaries hold and a **brand-new management connection (e.g. new SSH)** succeeds.
    - **Negative Fail-Closed Drill**: Block the upstream entry (Routes B/A2/C2) or pass a mismatched expected IP / stop the local proxy listener (Route A1) to verify no direct fallback occurs.
-   - **Leak & Config Audit**: Independently verify DNS path, IPv6, WebRTC (browser only), and config consistency. **Explicitly warn the user not to attach a production account until these local checks pass.**
+   - **Leak & Config Audit**: Independently verify DNS path, IPv6, WebRTC (browser only — you can open the bundled offline [assets/webrtc-probe.html](assets/webrtc-probe.html) inside the target browser profile), and config consistency. **Field tests in this repo are reference samples, not universal certification across all OS/proxy/browser builds — explicitly warn the user not to attach a production account until these local checks pass.**
 
 ---
 
