@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "name": "Fortress Level",
+  "spec": "references/08-fortress-levels.md",
+  "expiry_days": 30,
+  "statuses": {
+    "pass": "Collected on the target and met the pass criteria",
+    "fail": "Collected and did not meet the pass criteria",
+    "unknown": "Attempted but inconclusive",
+    "not_run": "Not collected",
+    "not_applicable": "Only valid when the profile does not require the check (e.g. its condition is false); must carry a note",
+    "user_attested": "Negative drill performed by the user and recorded manually; only valid for checks marked attestable"
+  },
+  "levels": [
+    { "id": "L0", "zh": "出口已核验", "en": "Egress verified", "summary_zh": "出口、DNS、三时段稳定性已核验；没有防漏保证", "summary_en": "Egress, DNS and multi-window stability verified; no leak-proof guarantee" },
+    { "id": "L1", "zh": "泄漏面已封堵", "en": "Leak surfaces closed", "summary_zh": "IPv6 / WebRTC 等泄漏面已封；应用层路线在断代理时拒绝拉起", "summary_en": "IPv6 / WebRTC leak surfaces closed; app-level routes refuse to launch without the proxy" },
+    { "id": "L2", "zh": "系统级默认阻断", "en": "System-level fail-closed", "summary_zh": "冷启动、重载失败、入口失效三项负向演练均未回退直连", "summary_en": "Cold boot, reload failure and entry loss drills never fall back to direct egress" },
+    { "id": "L3", "zh": "客机外网关双层", "en": "Out-of-guest gateway, two layers", "summary_zh": "客机外默认拒绝网关 + 客机内策略与防误启动，WAN 侧无未授权出站", "summary_en": "Out-of-guest default-deny gateway plus in-guest policy and launch gate; no unauthorized WAN egress" }
+  ],
+  "checks": {
+    "egress_dual": { "zh": "双中性端点 IPv4 出口一致", "en": "Dual neutral IPv4 egress", "tier": "B", "attestable": false, "matrix_row": 0, "ref": "references/01-route-selection-and-preflight.md" },
+    "ipv6": { "zh": "IPv6 阻断 / WAN 侧抓包", "en": "IPv6 blocking / WAN capture", "tier": "B", "attestable": false, "matrix_row": 1, "ref": "references/01-route-selection-and-preflight.md" },
+    "dns": { "zh": "DNS 远程解析与无直出", "en": "Remote DNS / no direct leak", "tier": "B", "attestable": false, "matrix_row": 2, "ref": "references/01-route-selection-and-preflight.md" },
+    "browser_webrtc": { "zh": "WebRTC 无泄漏", "en": "WebRTC no-leak", "tier": "A", "attestable": false, "matrix_row": 3, "ref": "assets/webrtc-probe.html" },
+    "app_fail_closed": { "zh": "应用层断代理拒绝拉起", "en": "App-level refuse-on-proxy-down", "tier": "B", "attestable": true, "matrix_row": 4, "ref": "references/02-route-a-local-and-fingerprint.md" },
+    "cold_boot": { "zh": "冷启动不回退直连", "en": "Cold boot fail-closed", "tier": "C", "attestable": true, "matrix_row": 4, "ref": "references/01-route-selection-and-preflight.md" },
+    "reload_failure": { "zh": "规则重载失败不回退直连", "en": "Reload failure fail-closed", "tier": "C", "attestable": true, "matrix_row": 4, "ref": "references/01-route-selection-and-preflight.md" },
+    "entry_loss": { "zh": "上游入口失效不回退直连", "en": "Upstream entry loss fail-closed", "tier": "C", "attestable": true, "matrix_row": 4, "ref": "references/01-route-selection-and-preflight.md" },
+    "management_ssh": { "zh": "演练中新建管理 SSH 可达", "en": "Brand-new management SSH reachable during drills", "tier": "C", "attestable": true, "matrix_row": 4, "ref": "references/01-route-selection-and-preflight.md" },
+    "stability": { "zh": "三时段出口稳定", "en": "Multi-window egress stability", "tier": "B", "attestable": false, "matrix_row": 5, "ref": "references/01-route-selection-and-preflight.md" },
+    "wan_capture": { "zh": "网关 WAN 侧无未授权出站", "en": "No unauthorized egress on gateway WAN", "tier": "C", "attestable": true, "matrix_row": null, "ref": "references/03-route-b-vm-openwrt-fortress.md" },
+    "guest_policy": { "zh": "客机内策略与防误启动生效", "en": "In-guest policy and launch gate active", "tier": "A", "attestable": false, "matrix_row": null, "ref": "references/route-b-windows-operations.md" },
+    "udp": { "zh": "UDP 不绕过网关", "en": "UDP does not bypass the gateway", "tier": "B", "attestable": false, "matrix_row": null, "ref": "references/03-route-b-vm-openwrt-fortress.md" },
+    "second_nic": { "zh": "无第二网卡旁路", "en": "No second-NIC bypass", "tier": "A", "attestable": false, "matrix_row": null, "ref": "references/03-route-b-vm-openwrt-fortress.md" },
+    "existing_connections": { "zh": "切换后已有连接不残留直连", "en": "No lingering direct connections after switch", "tier": "C", "attestable": true, "matrix_row": null, "ref": "references/03-route-b-vm-openwrt-fortress.md" }
+  },
+  "conditions": {
+    "browser_used": { "zh": "该环境里会用浏览器访问", "en": "A browser is used in this environment" },
+    "remote_management": { "zh": "通过 SSH 等远程通道管理（演练可能锁死自己）", "en": "Managed over SSH or another remote channel (drills can lock you out)" }
+  },
+  "profiles": {
+    "A1-web": {
+      "route": "A1", "component": "web", "matrix_column": 0, "max_level": "L1",
+      "requires": {
+        "L0": ["egress_dual", "dns", "stability"],
+        "L1": ["browser_webrtc", "app_fail_closed"]
+      }
+    },
+    "A1-cli": {
+      "route": "A1", "component": "cli", "matrix_column": 1, "max_level": "L1",
+      "requires": {
+        "L0": ["egress_dual", "dns", "stability"],
+        "L1": ["app_fail_closed"]
+      }
+    },
+    "A2": {
+      "route": "A2", "component": "system", "matrix_column": 2, "max_level": "L2",
+      "requires": {
+        "L0": ["egress_dual", "dns", "stability"],
+        "L1": ["ipv6", { "check": "browser_webrtc", "when": "browser_used" }],
+        "L2": ["cold_boot", "reload_failure", "entry_loss", { "check": "management_ssh", "when": "remote_management" }]
+      }
+    },
+    "B": {
+      "route": "B", "component": "system", "matrix_column": 2, "max_level": "L3",
+      "requires": {
+        "L0": ["egress_dual", "dns", "stability"],
+        "L1": ["ipv6", { "check": "browser_webrtc", "when": "browser_used" }],
+        "L2": ["cold_boot", "reload_failure", "entry_loss", "management_ssh"],
+        "L3": ["wan_capture", "guest_policy", "udp", "second_nic", "existing_connections"]
+      }
+    },
+    "C2": {
+      "route": "C2", "component": "system", "matrix_column": 2, "max_level": "L2",
+      "requires": {
+        "L0": ["egress_dual", "dns", "stability"],
+        "L1": ["ipv6", { "check": "browser_webrtc", "when": "browser_used" }],
+        "L2": ["cold_boot", "reload_failure", "entry_loss", "management_ssh"]
+      }
+    },
+    "C1": {
+      "route": "C1", "component": "system", "matrix_column": 3, "max_level": "L0",
+      "requires": {
+        "L0": ["egress_dual", "dns", "stability"]
+      }
+    }
+  }
+}

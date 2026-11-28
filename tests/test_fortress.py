@@ -200,3 +200,135 @@ class TestOfflineFailClosedAndTooling(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def _load_level_module():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("fortress_level", SCRIPTS / "fortress_level.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+class TestFortressLevels(unittest.TestCase):
+    """Fortress Level spec (assets/levels.json) and the host-side reference calculator."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.levels = json.loads((ASSETS / "levels.json").read_text(encoding="utf-8"))
+        cls.mod = _load_level_module()
+
+    def _profile_checks(self, prof):
+        out = {}
+        for entries in prof["requires"].values():
+            for entry in entries:
+                if isinstance(entry, str):
+                    out[entry] = None
+                else:
+                    out[entry["check"]] = entry["when"]
+        return out
+
+    def test_levels_json_is_self_consistent(self):
+        lv = self.levels
+        level_ids = [x["id"] for x in lv["levels"]]
+        self.assertEqual(level_ids, ["L0", "L1", "L2", "L3"])
+        for cid, c in lv["checks"].items():
+            with self.subTest(check=cid):
+                self.assertIn(c["tier"], {"A", "B", "C"})
+                self.assertTrue((ROOT / c["ref"]).exists(), c["ref"])
+        for name, prof in lv["profiles"].items():
+            with self.subTest(profile=name):
+                keys = list(prof["requires"])
+                self.assertEqual(keys, level_ids[: len(keys)], "levels must be contiguous from L0")
+                self.assertEqual(prof["max_level"], keys[-1])
+                for cid, cond in self._profile_checks(prof).items():
+                    self.assertIn(cid, lv["checks"])
+                    if cond is not None:
+                        self.assertIn(cond, lv["conditions"])
+
+    def _matrix(self, path, header_marker):
+        lines = path.read_text(encoding="utf-8").splitlines()
+        start = next(i for i, l in enumerate(lines) if l.startswith("|") and header_marker in l)
+        rows = []
+        for line in lines[start + 2:]:
+            if not line.startswith("|"):
+                break
+            rows.append([cell.strip() for cell in line.strip().strip("|").split("|")][1:])
+        self.assertEqual(len(rows), 6, f"{path.name}: expected 6 matrix rows")
+        return rows
+
+    def test_levels_match_preflight_matrix(self):
+        """levels.json must not drift from the S1→S2 applicability matrix in references/01 (ZH and EN)."""
+        vocab = {
+            "zh": (REFS / "01-route-selection-and-preflight.md", "A1（Web",
+                   {"必测": "required", "`not_applicable`": "na", "推荐": "any", "按宿主": "any", "改为应用层": "app"}),
+            "en": (REFS / "en" / "01-route-selection-and-preflight.md", "A1 (Web",
+                   {"Required": "required", "`not_applicable`": "na", "Recommended": "any", "Per host": "any", "App-level equivalent": "app"}),
+        }
+        system_drills = {"cold_boot", "reload_failure", "entry_loss", "management_ssh"}
+        for lang, (path, marker, words) in vocab.items():
+            rows = self._matrix(path, marker)
+            for name, prof in self.levels["profiles"].items():
+                present = self._profile_checks(prof)
+                col = prof["matrix_column"]
+                for cid, c in self.levels["checks"].items():
+                    if c["matrix_row"] is None:
+                        continue
+                    cell = rows[c["matrix_row"]][col]
+                    kind = next((v for k, v in words.items() if cell.startswith(k)), None)
+                    with self.subTest(lang=lang, profile=name, check=cid):
+                        self.assertIsNotNone(kind, f"unrecognised matrix cell: {cell}")
+                        if kind == "app":
+                            expect = cid == "app_fail_closed"
+                        elif c["matrix_row"] == 4 and kind == "required":
+                            expect = cid in system_drills
+                        elif kind == "required":
+                            expect = True
+                        elif kind == "na":
+                            expect = False
+                        else:
+                            continue
+                        self.assertEqual(cid in present, expect, f"matrix says {cell!r}")
+
+    def test_shared_level_vectors(self):
+        cases = json.loads((ROOT / "tests" / "fixtures" / "levels" / "cases.json").read_text(encoding="utf-8"))["cases"]
+        self.assertGreaterEqual(len(cases), 12)
+        for case in cases:
+            with self.subTest(case=case["name"]):
+                res = self.mod.evaluate(case["evidence"], self.levels, self.mod.parse_utc(case["now"]),
+                                        case.get("current_config_sha256"))
+                exp = case["expect"]
+                self.assertEqual(res["valid"], exp["valid"], res["errors"])
+                if not exp["valid"]:
+                    self.assertTrue(any(exp["error_contains"] in e for e in res["errors"]), res["errors"])
+                    continue
+                self.assertEqual(res["level"], exp["level"])
+                self.assertEqual(res["attested"], exp["attested"])
+                self.assertEqual(res["expired"], exp["expired"])
+                if "expires_utc" in exp:
+                    self.assertEqual(res["expires_utc"], exp["expires_utc"])
+                if "config_changed" in exp:
+                    self.assertEqual(res["config_changed"], exp["config_changed"])
+                nxt = res["missing_for_next"][0] if res["missing_for_next"] else None
+                if exp["next"] is None:
+                    self.assertIsNone(nxt)
+                else:
+                    self.assertEqual({"level": nxt["level"], "check": nxt["check"]}, exp["next"])
+
+    def test_evidence_v3_example_and_cli(self):
+        example = ASSETS / "evidence-v3.example.json"
+        data = json.loads(example.read_text(encoding="utf-8"))
+        self.assertEqual(set(data["checks"]), set(self.levels["checks"]), "example must list every check")
+        res = self.mod.evaluate(data, self.levels)
+        self.assertTrue(res["valid"], res["errors"])
+        self.assertIsNone(res["level"], "the shipped example must not claim any level")
+        cli = subprocess.run([sys.executable, str(SCRIPTS / "fortress_level.py"), str(example), "--json"],
+                             capture_output=True, text=True)
+        self.assertEqual(cli.returncode, 0, cli.stderr)
+        self.assertIsNone(json.loads(cli.stdout)["level"])
+        with tempfile.TemporaryDirectory() as tmp:
+            bad = pathlib.Path(tmp) / "bad.json"
+            bad.write_text(json.dumps({**data, "schema_version": 2}), encoding="utf-8")
+            cli = subprocess.run([sys.executable, str(SCRIPTS / "fortress_level.py"), str(bad)],
+                                 capture_output=True, text=True)
+            self.assertEqual(cli.returncode, 2)

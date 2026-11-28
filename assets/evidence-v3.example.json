@@ -1,0 +1,137 @@
+{
+  "schema_version": 3,
+  "request_id": "00000000000000000000000000000000",
+  "route": "B",
+  "component": "system",
+  "target_alias": "guest-example",
+  "config_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "conditions": {
+    "browser_used": true,
+    "remote_management": true
+  },
+  "level_claimed": null,
+  "captured_utc": null,
+  "checks": {
+    "egress_dual": {
+      "status": "not_run",
+      "method": "",
+      "captured_utc": null,
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+    },
+    "ipv6": {
+      "status": "not_run",
+      "method": "",
+      "captured_utc": null,
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+    },
+    "dns": {
+      "status": "not_run",
+      "method": "",
+      "captured_utc": null,
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+    },
+    "browser_webrtc": {
+      "status": "not_run",
+      "method": "",
+      "captured_utc": null,
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+    },
+    "cold_boot": {
+      "status": "not_run",
+      "method": "",
+      "captured_utc": null,
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+    },
+    "reload_failure": {
+      "status": "not_run",
+      "method": "",
+      "captured_utc": null,
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+    },
+    "entry_loss": {
+      "status": "not_run",
+      "method": "",
+      "captured_utc": null,
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+    },
+    "management_ssh": {
+      "status": "not_run",
+      "method": "",
+      "captured_utc": null,
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+    },
+    "stability": {
+      "status": "not_run",
+      "method": "",
+      "captured_utc": null,
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+    },
+    "wan_capture": {
+      "status": "not_run",
+      "method": "",
+      "captured_utc": null,
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+    },
+    "guest_policy": {
+      "status": "not_run",
+      "method": "",
+      "captured_utc": null,
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+    },
+    "udp": {
+      "status": "not_run",
+      "method": "",
+      "captured_utc": null,
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+    },
+    "second_nic": {
+      "status": "not_run",
+      "method": "",
+      "captured_utc": null,
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+    },
+    "existing_connections": {
+      "status": "not_run",
+      "method": "",
+      "captured_utc": null,
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+    },
+    "app_fail_closed": {
+      "status": "not_applicable",
+      "method": "",
+      "captured_utc": null,
+      "tool": "",
+      "raw_sha256": null,
+      "note": "Route B is system-level; app-level launcher check does not apply"
+    }
+  },
+  "private_evidence_reference": "<PRIVATE_EVIDENCE_PATH>"
+}

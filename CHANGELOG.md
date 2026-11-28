@@ -5,6 +5,10 @@ All notable changes to **Claude Fortress** are documented in this file.
 ## [Unreleased]
 
 ### Added
+- **Fortress Level self-assessment standard** (`references/08-fortress-levels.md`, `references/en/08-fortress-levels.md`, `assets/levels.json`): four cumulative levels (L0 egress verified → L3 out-of-guest gateway, two layers), rated per route component, 30-day expiry, config-generation invalidation, and `user_attested` allowed only for negative drills. A self-assessment, never a certification; changes no gate.
+- **Evidence format v3** (`assets/evidence-v3.example.json`): per-check objects with status, method, UTC capture time, tool and raw-evidence hash; adds route/component, conditions and `user_attested` / `not_applicable` rules.
+- **Host-side reference level calculator** (`scripts/fortress_level.py`): stdlib-only, read-only, offline; shared test vectors in `tests/fixtures/levels/cases.json` that the future offline report page must also pass.
+- **Tests**: `levels.json` self-consistency, drift check against the 01 S1→S2 applicability matrix (ZH and EN), shared level vectors, and calculator CLI exit codes.
 - **Offline WebRTC & Browser Hygiene Probe** (`assets/webrtc-probe.html`): zero-network single-file HTML probe for S1 browser verification (local ICE candidates, timezone, `navigator.language`, `navigator.webdriver`, copyable desensitized JSON).
 - **Automated Regression Test Suite & CI** (`tests/test_fortress.py` + `.github/workflows/ci.yml`): stdlib-only cross-platform test suite covering JSON, Python/Node/PowerShell AST, Markdown relative links, EN/ZH parity, zero-PII scan, fail-closed script guards, and Extension 06 boundaries.
 - **Repository Governance** (`AGENTS.md`, `CHANGELOG.md`): unified contributor/coding-agent rules, including *"field verification is a sample, not certification"*.
