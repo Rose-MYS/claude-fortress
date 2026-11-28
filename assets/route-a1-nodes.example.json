@@ -1,0 +1,27 @@
+{
+  "mode": "local",
+  "browser": "chrome",
+  "nodes": {
+    "taipei": {
+      "proxy_port": 18111,
+      "expected_ipv4": "192.0.2.14",
+      "locale": "auto",
+      "timezone": "auto",
+      "dns": "remote",
+      "probes": [
+        {"url": "http://a1.test/ip", "format": "text"},
+        {"url": "http://a1.test/geo", "format": "json"}
+      ]
+    },
+    "los-angeles": {
+      "proxy_port": 18112,
+      "expected_ipv4": "198.51.100.82",
+      "locale": "en-US",
+      "timezone": "America/Los_Angeles",
+      "dns": "remote",
+      "probes": [
+        {"url": "http://a1.test/ip", "format": "text"}
+      ]
+    }
+  }
+}
