@@ -68,9 +68,86 @@ const ALLOW_FULL = process.env.DISPATCH_ALLOW_FULL === "1";
 const RUN_ONCE = Boolean(CLI.once || process.env.DISPATCH_ONCE === "1");
 
 const HEARTBEAT_FILE = path.join(DISPATCH_DIR, "dispatcher.heartbeat.json");
+const LEDGER_FILE = path.join(DISPATCH_DIR, "usage-ledger.json");
 const DAEMON_LOG = path.join(DIRS.logs, "dispatcher.log");
 const PID_FILE = path.join(DISPATCH_DIR, "dispatcher.pid");
 const STARTED_AT = new Date().toISOString();
+
+function readJsonSafe(filePath, fallback = null) {
+  try {
+    return JSON.parse(fs.readFileSync(filePath, "utf8"));
+  } catch {
+    return fallback;
+  }
+}
+
+function parseTokensFromLogs(stdoutText, stderrText) {
+  const combined = `${stdoutText || ""}\n${stderrText || ""}`;
+  const m1 = combined.match(/tokens\s+used[\s:\r\n]+([\d,]+)/i);
+  if (m1) return parseInt(m1[1].replace(/,/g, ""), 10) || 0;
+  const m2 = combined.match(/"total_tokens"\s*:\s*(\d+)/i);
+  if (m2) return parseInt(m2[1], 10) || 0;
+  return 0;
+}
+
+function classifyFailure(status, summary, stderrTail, errMsg) {
+  if (status === "succeeded") return { health: "ready", cooldownMin: 0, reason: null };
+  const text = `${errMsg || ""}\n${stderrTail || ""}\n${summary || ""}`;
+  if (/not logged in|authentication required|missing_credential|please (run|use) \/login|no api key/i.test(text)) {
+    return { health: "needs_login", cooldownMin: 0, reason: "Authentication or credential required" };
+  }
+  if (/429|rate[\s_-]*limit|quota[\s_-]*exceeded|insufficient[\s_-]*(quota|balance|credit)|too many requests|usage limit/i.test(text)) {
+    return { health: "rate_limited", cooldownMin: 45, reason: "Rate-limited or quota exhausted (45m cooldown)" };
+  }
+  return { health: "ready", cooldownMin: 0, reason: null };
+}
+
+function recordUsage(agentId, record) {
+  try {
+    const ledger = readJsonSafe(LEDGER_FILE, { version: 1, agents: {}, history: [] });
+    ledger.agents = ledger.agents || {};
+    ledger.history = Array.isArray(ledger.history) ? ledger.history : [];
+
+    const prev = ledger.agents[agentId] || {
+      health_status: "ready",
+      cooldown_until: null,
+      last_reason: null,
+      total_runs: 0,
+      succeeded_runs: 0,
+      failed_runs: 0,
+      total_tokens_reported: 0,
+      last_run_at: null,
+      last_status: null,
+    };
+
+    const diag = classifyFailure(record.status, record.summary, record.stderr_tail, record.error);
+    prev.total_runs += 1;
+    if (record.status === "succeeded") prev.succeeded_runs += 1;
+    else prev.failed_runs += 1;
+    prev.total_tokens_reported += record.tokens || 0;
+    prev.last_run_at = record.finished_at;
+    prev.last_status = record.status;
+    prev.health_status = diag.health;
+    prev.last_reason = diag.reason;
+    prev.cooldown_until =
+      diag.cooldownMin > 0 ? new Date(Date.now() + diag.cooldownMin * 60 * 1000).toISOString() : null;
+
+    ledger.agents[agentId] = prev;
+    ledger.history.push({
+      id: record.id,
+      agent: agentId,
+      status: record.status,
+      tokens: record.tokens || 0,
+      duration_ms: record.duration_ms || 0,
+      finished_at: record.finished_at,
+    });
+    if (ledger.history.length > 500) ledger.history = ledger.history.slice(-500);
+    ledger.updated_at = new Date().toISOString();
+    atomicWriteJson(LEDGER_FILE, ledger);
+  } catch (err) {
+    log(`Ledger write failed: ${err.message}`);
+  }
+}
 
 function ensureDirs() {
   for (const d of Object.values(DIRS)) {
@@ -132,10 +209,31 @@ function resolveExecutable(candidates) {
   return null;
 }
 
+function resolveExistingFile(candidates) {
+  for (const p of candidates) {
+    if (p && fs.existsSync(p)) return p;
+  }
+  return null;
+}
+
+const WORKBUDDY_PRODUCT_CFG = resolveExistingFile([
+  process.env.DISPATCH_WORKBUDDY_PRODUCT_CONFIG,
+  process.env.ACC_PRODUCT_CONFIG_PATH,
+]);
+
 const RESOLVED_BINS = {
   dsh: resolveExecutable(IS_WIN ? ["dsh.cmd", "dsh.exe", "dsh.ps1"] : ["dsh"]),
   agy: resolveExecutable(IS_WIN ? ["agy.exe", "agy.cmd"] : ["agy"]),
   codex: resolveExecutable(IS_WIN ? ["codex.cmd", "codex.exe", "codex.ps1"] : ["codex"]),
+  autoclaw:
+    resolveExistingFile([process.env.DISPATCH_AUTOCLAW_CLI]) ||
+    resolveExecutable(IS_WIN ? ["zcode.cmd", "zcode.exe"] : ["zcode"]),
+  workbuddy:
+    resolveExistingFile([process.env.DISPATCH_WORKBUDDY_CLI]) ||
+    resolveExecutable(IS_WIN ? ["codebuddy.cmd", "codebuddy.exe"] : ["codebuddy"]),
+  qoder:
+    resolveExistingFile([process.env.DISPATCH_QODER_CLI]) ||
+    resolveExecutable(IS_WIN ? ["qoderclicn.cmd", "qoderclicn.exe", "qodercli.cmd", "qodercli.exe"] : ["qoderclicn", "qodercli"]),
 };
 
 function normalizeAgent(raw) {
@@ -143,6 +241,9 @@ function normalizeAgent(raw) {
   if (s === "antigravity" || s === "agy") return "agy";
   if (s === "dsh") return "dsh";
   if (s === "codex") return "codex";
+  if (s === "autoclaw" || s === "zcode") return "autoclaw";
+  if (s === "workbuddy" || s === "codebuddy") return "workbuddy";
+  if (s === "qoder" || s === "qodercli" || s === "qoderclicn" || s === "qodercn") return "qoder";
   return null;
 }
 
@@ -285,6 +386,65 @@ function spawnAgent(agentId, task, cwd, wrappedPrompt, lastMsgFile) {
     if (task.model) args.push("--model", String(task.model));
     if (timeoutSec) args.push("--print-timeout", `${timeoutSec}s`);
     const child = spawn(bin, args, spawnOpts);
+    child.stdin.end();
+    return child;
+  }
+
+  if (agentId === "autoclaw") {
+    let promptArg = wrappedPrompt;
+    if (Buffer.byteLength(promptArg, "utf8") > 12000) {
+      const promptFile = path.join(DIRS.prompts, `${task.id}.md`);
+      fs.writeFileSync(promptFile, wrappedPrompt, "utf8");
+      promptArg = `Read and execute the task instructions in: ${promptFile}`;
+    }
+    const zMode = mode === "read-only" ? "plan" : mode === "full" && ALLOW_FULL ? "yolo" : "build";
+    const isJs = /\.[cm]?js$/i.test(bin);
+    const args = isJs
+      ? [bin, "-p", promptArg, "--cwd", cwd, "--mode", zMode, "--no-color"]
+      : ["-p", promptArg, "--cwd", cwd, "--mode", zMode, "--no-color"];
+    const child = isJs ? spawn(process.execPath, args, spawnOpts) : spawn(bin, args, spawnOpts);
+    child.stdin.end();
+    return child;
+  }
+
+  if (agentId === "workbuddy") {
+    let promptArg = wrappedPrompt;
+    if (Buffer.byteLength(promptArg, "utf8") > 12000) {
+      const promptFile = path.join(DIRS.prompts, `${task.id}.md`);
+      fs.writeFileSync(promptFile, wrappedPrompt, "utf8");
+      promptArg = `Read and execute the task instructions in: ${promptFile}`;
+    }
+    const permMode =
+      mode === "read-only" ? "plan" : mode === "full" && ALLOW_FULL ? "bypassPermissions" : "auto";
+    const cliArgs = ["-p", "--permission-mode", permMode, "--add-dir", cwd];
+    if (task.model) cliArgs.push("--model", String(task.model));
+    cliArgs.push(promptArg);
+    const env = { ...process.env };
+    if (WORKBUDDY_PRODUCT_CFG) env.ACC_PRODUCT_CONFIG_PATH = WORKBUDDY_PRODUCT_CFG;
+    const isJs = /\.[cm]?js$/i.test(bin);
+    const child = isJs
+      ? spawn(process.execPath, [bin, ...cliArgs], { ...spawnOpts, env })
+      : spawn(bin, cliArgs, { ...spawnOpts, env });
+    child.stdin.end();
+    return child;
+  }
+
+  if (agentId === "qoder") {
+    let promptArg = wrappedPrompt;
+    if (Buffer.byteLength(promptArg, "utf8") > 12000) {
+      const promptFile = path.join(DIRS.prompts, `${task.id}.md`);
+      fs.writeFileSync(promptFile, wrappedPrompt, "utf8");
+      promptArg = `Read and execute the task instructions in: ${promptFile}`;
+    }
+    const permMode =
+      mode === "read-only" ? "default" : mode === "full" && ALLOW_FULL ? "bypass_permissions" : "auto";
+    const args = ["-p", "-w", cwd, "--permission-mode", permMode];
+    if (task.model) args.push("-m", String(task.model));
+    args.push("--", promptArg);
+    const child =
+      IS_WIN && /\.cmd$/i.test(bin)
+        ? spawn("cmd.exe", ["/d", "/s", "/c", bin, ...args], spawnOpts)
+        : spawn(bin, args, spawnOpts);
     child.stdin.end();
     return child;
   }
@@ -510,7 +670,12 @@ function startTask(pendingFile) {
     else if (info.timedOut) status = "timeout";
     else if (spawnErr || exitCode !== 0) status = "failed";
 
-    atomicWriteJson(path.join(DIRS.done, `${taskId}.result.json`), {
+    const summary = extractSummary(agentId, stdoutLog, lastMsgFile);
+    const stderrTail = readTail(stderrLog, 4096).trim();
+    const tokens = parseTokensFromLogs(readTail(stdoutLog, 8192), stderrTail);
+    const finishedAt = new Date().toISOString();
+
+    const resultObj = {
       id: taskId,
       agent: agentId,
       cwd,
@@ -519,14 +684,17 @@ function startTask(pendingFile) {
       exit_code: exitCode,
       error: spawnErr ? spawnErr.message : null,
       started_at: startedAt,
-      finished_at: new Date().toISOString(),
+      finished_at: finishedAt,
       duration_ms: durationMs,
-      summary: extractSummary(agentId, stdoutLog, lastMsgFile),
-      stderr_tail: readTail(stderrLog, 4096).trim(),
+      tokens_reported: tokens,
+      summary,
+      stderr_tail: stderrTail,
       stdout_log: path.relative(SHARE_ROOT, stdoutLog).replace(/\\/g, "/"),
       stderr_log: path.relative(SHARE_ROOT, stderrLog).replace(/\\/g, "/"),
-    });
-    log(`Finished ${taskId} | status=${status} | code=${exitCode} | ${(durationMs / 1000).toFixed(1)}s`);
+    };
+    atomicWriteJson(path.join(DIRS.done, `${taskId}.result.json`), resultObj);
+    recordUsage(agentId, { ...resultObj, tokens });
+    log(`Finished ${taskId} | status=${status} | code=${exitCode} | tokens=${tokens} | ${(durationMs / 1000).toFixed(1)}s`);
     writeHeartbeat();
   };
 

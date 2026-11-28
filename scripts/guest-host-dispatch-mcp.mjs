@@ -35,6 +35,8 @@ const DIRS = {
   cancel: path.join(DISPATCH_DIR, "cancel"),
 };
 const HEARTBEAT_FILE = path.join(DISPATCH_DIR, "dispatcher.heartbeat.json");
+const CATALOG_FILE = path.join(DISPATCH_DIR, "agents-catalog.json");
+const LEDGER_FILE = path.join(DISPATCH_DIR, "usage-ledger.json");
 
 function ensureDirs() {
   for (const d of Object.values(DIRS)) {
@@ -107,6 +109,93 @@ function getHealth() {
   return { online, heartbeat_age_sec: ageSec, share_root: SHARE_ROOT, ...hb };
 }
 
+function getAgentsOverview() {
+  const health = getHealth();
+  const catalog = readJsonSafe(CATALOG_FILE) || { routing_policy: {}, agents: {} };
+  const ledger = readJsonSafe(LEDGER_FILE) || { agents: {}, history: [] };
+  const now = Date.now();
+  const ms5h = 5 * 3600 * 1000;
+  const ms7d = 7 * 24 * 3600 * 1000;
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const todayMs = startOfToday.getTime();
+
+  const runningByAgent = {};
+  for (const t of health.running_tasks || []) {
+    runningByAgent[t.agent] = (runningByAgent[t.agent] || 0) + 1;
+  }
+
+  const allIds = Array.from(
+    new Set([
+      ...Object.keys(catalog.agents || {}),
+      ...Object.keys(health.available_agents || {}),
+      ...Object.keys(ledger.agents || {}),
+    ])
+  );
+
+  const agents = allIds.map((id) => {
+    const cat = (catalog.agents && catalog.agents[id]) || {};
+    const led = (ledger.agents && ledger.agents[id]) || {};
+    const installed = Boolean(health.available_agents && health.available_agents[id]);
+    const hist = (ledger.history || []).filter((h) => h.agent === id);
+
+    let runs5h = 0, tokens5h = 0, runsToday = 0, tokensToday = 0, runs7d = 0, tokens7d = 0;
+    for (const h of hist) {
+      const ts = Date.parse(h.finished_at || "");
+      if (!ts) continue;
+      const tok = h.tokens || 0;
+      if (now - ts <= ms5h) { runs5h++; tokens5h += tok; }
+      if (ts >= todayMs) { runsToday++; tokensToday += tok; }
+      if (now - ts <= ms7d) { runs7d++; tokens7d += tok; }
+    }
+
+    const cooldownUntilMs = led.cooldown_until ? Date.parse(led.cooldown_until) : 0;
+    const inCooldown = cooldownUntilMs > now;
+    const enabled = cat.enabled !== false;
+
+    let effectiveStatus = "ready";
+    if (!health.online) effectiveStatus = "dispatcher_offline";
+    else if (!installed) effectiveStatus = "not_installed";
+    else if (!enabled) effectiveStatus = "disabled";
+    else if (inCooldown) effectiveStatus = "rate_limited";
+    else if (led.health_status === "needs_login") effectiveStatus = "needs_login";
+    else if ((runningByAgent[id] || 0) > 0) effectiveStatus = "busy";
+
+    return {
+      id,
+      display_name: cat.display_name || id,
+      effective_status: effectiveStatus,
+      enabled,
+      installed,
+      tier: cat.tier || "medium",
+      priority: cat.priority ?? 99,
+      strengths: cat.strengths || [],
+      quota_hint: cat.quota_hint || "",
+      notes: cat.notes || "",
+      running_now: runningByAgent[id] || 0,
+      cooldown_until: inCooldown ? led.cooldown_until : null,
+      last_reason: led.last_reason || null,
+      last_run_at: led.last_run_at || null,
+      last_status: led.last_status || null,
+      usage: {
+        last_5h: { runs: runs5h, tokens_reported: tokens5h },
+        today: { runs: runsToday, tokens_reported: tokensToday },
+        last_7d: { runs: runs7d, tokens_reported: tokens7d },
+        total_runs: led.total_runs || 0,
+      },
+    };
+  });
+
+  agents.sort((a, b) => a.priority - b.priority);
+  return {
+    dispatcher_online: health.online,
+    running_total: health.running_count || 0,
+    max_concurrent: health.max_concurrent || 2,
+    routing_policy: catalog.routing_policy || {},
+    agents,
+  };
+}
+
 function getTaskSnapshot(taskId) {
   const safeId = String(taskId || "").replace(/[^a-zA-Z0-9._-]/g, "_");
   const doneFile = path.join(DIRS.done, `${safeId}.result.json`);
@@ -160,12 +249,50 @@ const TOOLS = [
     inputSchema: { type: "object", properties: {}, additionalProperties: false },
   },
   {
-    name: "host_dispatch",
-    description: "Dispatch a task to a whitelisted host agent (codex, agy/antigravity, or dsh) via the shared-folder queue.",
+    name: "host_agents_overview",
+    description:
+      "Return the host multi-agent capability, quota hint, cooldown/login health, 5h/today/7d usage stats, and routing policy board.",
+    inputSchema: { type: "object", properties: {}, additionalProperties: false },
+  },
+  {
+    name: "host_update_agent_note",
+    description:
+      "Update an agent's quota_hint, enabled flag, or clear its cooldown/login status in the overview board.",
     inputSchema: {
       type: "object",
       properties: {
-        agent: { type: "string", enum: ["dsh", "agy", "antigravity", "codex"] },
+        agent: { type: "string", enum: ["dsh", "agy", "codex", "autoclaw", "workbuddy", "qoder"] },
+        quota_hint: { type: "string" },
+        enabled: { type: "boolean" },
+        clear_status: { type: "boolean" },
+      },
+      required: ["agent"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "host_dispatch",
+    description:
+      "Dispatch a task to a whitelisted host agent (codex, agy/antigravity, autoclaw/zcode, qoder/qoderclicn, workbuddy/codebuddy, or dsh) via the shared-folder queue.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        agent: {
+          type: "string",
+          enum: [
+            "dsh",
+            "agy",
+            "antigravity",
+            "codex",
+            "autoclaw",
+            "zcode",
+            "workbuddy",
+            "codebuddy",
+            "qoder",
+            "qodercli",
+            "qoderclicn",
+          ],
+        },
         prompt: { type: "string" },
         project: { type: "string" },
         cwd: { type: "string" },
@@ -218,10 +345,53 @@ async function handleToolCall(name, args) {
   if (name === "host_health") {
     return { text: JSON.stringify(getHealth(), null, 2) };
   }
+  if (name === "host_agents_overview") {
+    return { text: JSON.stringify(getAgentsOverview(), null, 2) };
+  }
+  if (name === "host_update_agent_note") {
+    const id = String(args.agent || "").trim().toLowerCase();
+    if (!["dsh", "agy", "codex", "autoclaw", "workbuddy", "qoder"].includes(id)) {
+      return { isError: true, text: `Unsupported agent: ${args.agent}` };
+    }
+    const catalog = readJsonSafe(CATALOG_FILE) || { routing_policy: {}, agents: {} };
+    catalog.agents = catalog.agents || {};
+    catalog.agents[id] = catalog.agents[id] || { display_name: id, enabled: true };
+    if (typeof args.quota_hint === "string") catalog.agents[id].quota_hint = args.quota_hint;
+    if (typeof args.enabled === "boolean") catalog.agents[id].enabled = args.enabled;
+    catalog.updated_at = new Date().toISOString();
+    atomicWriteJson(CATALOG_FILE, catalog);
+    if (args.clear_status) {
+      const ledger = readJsonSafe(LEDGER_FILE);
+      if (ledger && ledger.agents && ledger.agents[id]) {
+        ledger.agents[id].health_status = "ready";
+        ledger.agents[id].cooldown_until = null;
+        ledger.agents[id].last_reason = null;
+        ledger.updated_at = new Date().toISOString();
+        atomicWriteJson(LEDGER_FILE, ledger);
+      }
+    }
+    return {
+      text: JSON.stringify({ updated: id, overview: getAgentsOverview().agents.find((a) => a.id === id) }, null, 2),
+    };
+  }
   if (name === "host_dispatch") {
     const rawAgent = String(args.agent || "").trim().toLowerCase();
-    const agent = rawAgent === "antigravity" ? "agy" : rawAgent;
-    if (!["dsh", "agy", "codex"].includes(agent)) {
+    const aliasMap = {
+      antigravity: "agy",
+      agy: "agy",
+      dsh: "dsh",
+      codex: "codex",
+      autoclaw: "autoclaw",
+      zcode: "autoclaw",
+      workbuddy: "workbuddy",
+      codebuddy: "workbuddy",
+      qoder: "qoder",
+      qodercli: "qoder",
+      qoderclicn: "qoder",
+      qodercn: "qoder",
+    };
+    const agent = aliasMap[rawAgent];
+    if (!agent) {
       return { isError: true, text: `Unsupported agent: ${args.agent}` };
     }
     if (!args.prompt || !String(args.prompt).trim()) {

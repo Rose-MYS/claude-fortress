@@ -226,7 +226,19 @@ class TestOfflineFailClosedAndTooling(unittest.TestCase):
 
                 tools = rpc(2, "tools/list", {})
                 names = {t["name"] for t in tools["result"]["tools"]}
-                self.assertTrue({"host_health", "host_dispatch", "host_task_status", "host_list_tasks", "host_cancel_task"}.issubset(names))
+                self.assertTrue({
+                    "host_health",
+                    "host_agents_overview",
+                    "host_update_agent_note",
+                    "host_dispatch",
+                    "host_task_status",
+                    "host_list_tasks",
+                    "host_cancel_task",
+                }.issubset(names))
+
+                # Seed catalog example and verify overview + note update
+                (share / "dispatch").mkdir(exist_ok=True)
+                shutil.copy2(ASSETS / "host-dispatch-catalog.example.json", share / "dispatch" / "agents-catalog.json")
 
                 # Wait briefly for dispatcher heartbeat
                 import time
@@ -240,8 +252,18 @@ class TestOfflineFailClosedAndTooling(unittest.TestCase):
                     time.sleep(0.2)
                 self.assertTrue(hb_ok, "host-dispatcher heartbeat did not come online")
 
+                ov = rpc(4, "tools/call", {"name": "host_agents_overview", "arguments": {}})
+                ov_data = json.loads(ov["result"]["content"][0]["text"])
+                self.assertTrue(ov_data["dispatcher_online"])
+                self.assertEqual(ov_data["routing_policy"]["default_stance"], "claude_first")
+                self.assertTrue({"codex", "agy", "autoclaw", "qoder", "workbuddy", "dsh"}.issubset({a["id"] for a in ov_data["agents"]}))
+
+                upd = rpc(5, "tools/call", {"name": "host_update_agent_note", "arguments": {"agent": "qoder", "quota_hint": "ok", "enabled": False}})
+                upd_data = json.loads(upd["result"]["content"][0]["text"])
+                self.assertEqual(upd_data["overview"]["effective_status"], "disabled")
+
                 # Guardrail: directory escape must be rejected
-                esc = rpc(4, "tools/call", {
+                esc = rpc(6, "tools/call", {
                     "name": "host_dispatch",
                     "arguments": {"agent": "codex", "cwd": str(outside), "prompt": "hi", "mode": "read-only", "wait": True, "wait_sec": 5},
                 })
@@ -250,7 +272,7 @@ class TestOfflineFailClosedAndTooling(unittest.TestCase):
                 self.assertIn("escapes share root", esc_res["error"])
 
                 # Guardrail: unsupported agent rejected at MCP layer
-                bad_agent = rpc(5, "tools/call", {
+                bad_agent = rpc(7, "tools/call", {
                     "name": "host_dispatch",
                     "arguments": {"agent": "bash", "prompt": "hi"},
                 })

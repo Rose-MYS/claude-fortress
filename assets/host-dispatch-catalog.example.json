@@ -1,0 +1,66 @@
+{
+  "routing_policy": {
+    "default_stance": "claude_first",
+    "autonomous_dispatch_trigger": "host_only_capabilities",
+    "autonomous_dispatch_mode": "confirm_before_dispatch",
+    "anti_relay_rule": "require_clear_spec_and_post_verification",
+    "on_failure_or_rate_limit": "pause_and_ask_user",
+    "note": "Default to doing regular tasks directly inside the guest agent. Propose host dispatch autonomously only for host-only capabilities, and always wait for explicit user approval before calling host_dispatch."
+  },
+  "agents": {
+    "codex": {
+      "display_name": "Codex",
+      "enabled": true,
+      "tier": "high",
+      "priority": 1,
+      "strengths": ["complex implementation", "deep debugging", "red-team code review", "test suites"],
+      "quota_hint": "available (watch 5h / weekly window)",
+      "notes": "High-difficulty engineering changes and strict reviews"
+    },
+    "agy": {
+      "display_name": "Antigravity (agy)",
+      "enabled": true,
+      "tier": "high",
+      "priority": 2,
+      "strengths": ["multi-file engineering", "refactoring", "script + test verification"],
+      "quota_hint": "available",
+      "notes": "Complex multi-step tasks and cross-verification"
+    },
+    "autoclaw": {
+      "display_name": "AutoClaw (zcode)",
+      "enabled": true,
+      "tier": "medium",
+      "priority": 3,
+      "strengths": ["medium coding tasks", "utility scripts", "routine refactors"],
+      "quota_hint": "plenty",
+      "notes": "Fast turnaround; offloads routine work from primary quota"
+    },
+    "qoder": {
+      "display_name": "Qoder CLI",
+      "enabled": true,
+      "tier": "medium",
+      "priority": 4,
+      "strengths": ["repository understanding", "routine edits", "docs & tests"],
+      "quota_hint": "requires one-time CLI /login on host",
+      "notes": "Medium-tier offload once authenticated"
+    },
+    "workbuddy": {
+      "display_name": "WorkBuddy / CodeBuddy",
+      "enabled": true,
+      "tier": "medium",
+      "priority": 5,
+      "strengths": ["office docs & engineering helpers", "routine scripts", "multi-model routing"],
+      "quota_hint": "requires one-time CLI login on host",
+      "notes": "Medium-tier offload once authenticated"
+    },
+    "dsh": {
+      "display_name": "DeepSeek Harness (dsh)",
+      "enabled": true,
+      "tier": "low",
+      "priority": 6,
+      "strengths": ["batch document processing", "lightweight extraction", "low-cost text tasks"],
+      "quota_hint": "requires configured headless provider credential",
+      "notes": "Low-cost batch work"
+    }
+  }
+}

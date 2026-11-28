@@ -27,26 +27,42 @@
 
 > **信任边界声明（C 档知情确认）**：本模块允许 VM 内的 Claude 主动向宿主机白名单 Agent（`codex` / `agy` / `dsh`）派发任务。启用它意味着扩大了客机对宿主机指定协作目录的影响面——**仅在隔离路线已验证且用户明确同意放开该协作目录时启用**，绝不向宿主机暴露任意 shell 执行权。
 
-### 1. 架构：零网络端口的共享目录队列 + 客机 MCP
+### 1. 基础版：零网络端口的共享目录队列 + 客机 MCP
 
 不开放任何 VM ↔ 宿主机网络端口（不破坏 VM 代理/防火墙隔离），全部经由共享目录 `dispatch/{pending,running,done,logs,cancel}` 流转：
 
 - **宿主机常驻分发器**：[host-dispatcher.mjs](../scripts/host-dispatcher.mjs)（`node scripts/host-dispatcher.mjs --share-root <HOST_SHARE_ROOT>`）。纯本地文件轮询（无任务零 token 消耗），建议挂载到宿主机 VM 启动脚本中**随 VM 开机同步拉起**，不空跑系统常驻服务。
-- **客机零依赖 MCP Server**：[guest-host-dispatch-mcp.mjs](../scripts/guest-host-dispatch-mcp.mjs)（配置模板见 [host-dispatch-mcp.example.json](../assets/host-dispatch-mcp.example.json)）。向客机 Claude 暴露 5 个工具：`host_health`、`host_dispatch`、`host_task_status`、`host_list_tasks`、`host_cancel_task`。
+- **客机零依赖 MCP Server**：[guest-host-dispatch-mcp.mjs](../scripts/guest-host-dispatch-mcp.mjs)（配置模板见 [host-dispatch-mcp.example.json](../assets/host-dispatch-mcp.example.json)）。向客机 Claude 暴露 7 个工具：`host_health`、`host_agents_overview`、`host_update_agent_note`、`host_dispatch`、`host_task_status`、`host_list_tasks`、`host_cancel_task`。
 - **白名单宿主机 CLI 映射**（均从 stdin 传入长 prompt 或超长落盘，避免命令行转义与长度上限）：
-  - `codex` → `codex exec --skip-git-repo-check -C <cwd> --approve-for-me -o <last_msg> -`（只读模式 `-s read-only`）
-  - `agy`（Antigravity） → `agy -p <prompt> --output-format json --mode auto --add-dir <cwd>`（只读模式 `--mode plan`）
+  - `codex` → `codex exec --skip-git-repo-check -C <cwd> --approve-for-me -o <last_msg> -`（只读 `-s read-only`）
+  - `agy`（Antigravity） → `agy -p <prompt> --output-format json --mode auto --add-dir <cwd>`（只读 `--mode plan`）
+  - `autoclaw`（`zcode`） → `zcode -p <prompt> --cwd <cwd> --mode build --no-color`（只读 `--mode plan`，支持 `DISPATCH_AUTOCLAW_CLI` 指定路径）
+  - `qoder`（`qoderclicn`/`qodercli`） → `qoderclicn -p -w <cwd> --permission-mode auto -- <prompt>`（只读 `--permission-mode default`）
+  - `workbuddy`（`codebuddy`） → `codebuddy -p --permission-mode auto --add-dir <cwd> <prompt>`（只读 `--permission-mode plan`，支持 `DISPATCH_WORKBUDDY_CLI` / `DISPATCH_WORKBUDDY_PRODUCT_CONFIG`）
   - `dsh` → `dsh --profile headless -`（注意确认 `headless` profile 对应的模型凭证或默认 provider 已就绪）
 
-### 2. 强制安全护栏
+### 2. 进阶版：多 Agent 能力/额度/冷却看板 + 5 条防过度外包铁律
 
-1. **白名单 Agent + 结构化参数**：只接受 `dsh` / `agy` / `codex`，拒绝任意命令执行；高危 `mode="full"` 默认硬禁用（仅宿主机显式设置 `DISPATCH_ALLOW_FULL=1` 才放行）。
+在基础版之上，新增「状态感知 + 约束治理」层，解决“不知道哪个宿主机 Agent 还有额度”以及“客机 Claude 过度偷懒把常规活往外推”两个痛点：
+
+- **能力与额度看板**：复制 [host-dispatch-catalog.example.json](../assets/host-dispatch-catalog.example.json) 为 `<SHARE_ROOT>/dispatch/agents-catalog.json`，维护各 Agent 的难度档位（`high` / `medium` / `low`）、擅长领域、优先级与 `quota_hint`。
+- **自动记账与限流冷却**：`host-dispatcher.mjs` 每次任务结束后自动写入 `<SHARE_ROOT>/dispatch/usage-ledger.json`，统计近 5 小时 / 今日 / 7 天调用次数与日志报告的 token 数；命中 `429` / 额度不足自动进入 **45 分钟冷却（`rate_limited`）**，命中未登录自动标记 `needs_login`，成功执行后自动恢复 `ready`。
+- **客机 Claude 防过度外包铁律**：将 [guest-orchestration-rules.zh-CN.md](../assets/guest-orchestration-rules.zh-CN.md) 写入客机 Claude Code 的 `~/.claude/CLAUDE.md` 或 Claude Desktop 的项目/全局指令，固化 5 条规则：
+  1. **默认自己亲手干**：常规开发、排错、改代码、写文档一律由客机 Claude 自己完成。
+  2. **唯一自主提议外包门槛**：仅限**宿主机专属场景**（必须依赖宿主机本机环境/工具链）；并行加速、交叉审查、批量活一律等用户明确开口再派。
+  3. **强确认红线**：自主提议外包前先调 `host_agents_overview` 查看板，发出简短派工计划并**停下来等用户明确同意**后再调用 `host_dispatch`；用户明确点名某 Agent 时可直接执行。
+  4. **禁止当二传手**：派活前必须自己写清精确目标与约束，收回结果后必须亲自核验 diff/日志/摘要再汇报。
+  5. **限流/失败显式兜底**：遇到 `rate_limited`、`needs_login`、离线或失败时立即停下报告原因，给出「切候补 Agent」或「改由 Claude 自己处理」供用户拍板，绝不静默切换。
+
+### 3. 强制安全护栏
+
+1. **白名单 Agent + 结构化参数**：只接受 `dsh` / `agy` / `codex` / `autoclaw` / `workbuddy` / `qoder`，拒绝任意命令执行；高危 `mode="full"` 默认硬禁用（仅宿主机显式设置 `DISPATCH_ALLOW_FULL=1` 才放行）。
 2. **目录越界与符号链接逃逸拦截**：所有任务 `cwd` 经 `realpath` 解析后必须严格位于 `--share-root` 内，否则直接写 `status: "rejected"`。
 3. **按目录写锁与并发/超时保护**：同一目录同时只允许一个写任务运行（不同作业目录可并发，默认 `MAX_CONC=2`）；默认超时 600s（上限 1800s），超时或 `host_cancel_task` 时清理整棵进程树。
 4. **防套娃死循环**：分发器自动注入上下文前缀，禁止宿主机 Agent 反向写回 `dispatch/` 或再向客机派活，并禁止 `git push` 到远端。
 5. **MCP 单次等待防超时**：`host_dispatch` 默认 `wait_sec=55`（避免 Claude Desktop MCP 调用超时），长任务超时未结束时返回 `running` + 最新日志尾部，由客机 Claude 继续用 `host_task_status` 续等。
 
-### 3. 反向调度（宿主机 → 客机 Claude）的取舍
+### 4. 反向调度（宿主机 → 客机 Claude）的取舍
 
 - 若客机仅安装 **Claude Desktop**（纯 GUI），无官方非交互 CLI，仅适合通过只读 `inbox-ro/` + 人工/定时任务异步消费，不推荐脆弱的 UI 模拟。
 - 若确需宿主机主动调用客机 Claude，应在客机安装官方 **Claude Code CLI**，经受控管理通道（如宿主机单向 SSH）调用 `claude -p`，并严格限制单并发与 `max_depth=1` 防双向死循环。
