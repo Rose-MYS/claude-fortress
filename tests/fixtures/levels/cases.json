@@ -1,0 +1,1801 @@
+{
+ "description": "Shared test vectors for Fortress Level: scripts/fortress_level.py and the offline report page must agree on every case.",
+ "cases": [
+  {
+   "name": "B 全部通过 → L3",
+   "now": "2026-11-28T00:00:00Z",
+   "evidence": {
+    "schema_version": 3,
+    "request_id": "00000000000000000000000000000000",
+    "route": "B",
+    "component": "system",
+    "target_alias": "guest-example",
+    "config_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "conditions": {
+     "browser_used": true,
+     "remote_management": true
+    },
+    "level_claimed": null,
+    "captured_utc": null,
+    "checks": {
+     "egress_dual": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "dns": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "stability": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "ipv6": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "browser_webrtc": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "cold_boot": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "reload_failure": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "entry_loss": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "management_ssh": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "wan_capture": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "guest_policy": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "udp": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "second_nic": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "existing_connections": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     }
+    },
+    "private_evidence_reference": "<PRIVATE_EVIDENCE_PATH>"
+   },
+   "expect": {
+    "valid": true,
+    "level": "L3",
+    "attested": [],
+    "expired": false,
+    "next": null
+   }
+  },
+  {
+   "name": "B 负向演练用户自述 → L3 并标出",
+   "now": "2026-11-28T00:00:00Z",
+   "evidence": {
+    "schema_version": 3,
+    "request_id": "00000000000000000000000000000000",
+    "route": "B",
+    "component": "system",
+    "target_alias": "guest-example",
+    "config_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "conditions": {
+     "browser_used": true,
+     "remote_management": true
+    },
+    "level_claimed": null,
+    "captured_utc": null,
+    "checks": {
+     "egress_dual": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "dns": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "stability": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "ipv6": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "browser_webrtc": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "cold_boot": {
+      "status": "user_attested",
+      "method": "",
+      "captured_utc": "2026-11-20T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "reload_failure": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "entry_loss": {
+      "status": "user_attested",
+      "method": "",
+      "captured_utc": "2026-11-20T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "management_ssh": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "wan_capture": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "guest_policy": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "udp": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "second_nic": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "existing_connections": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     }
+    },
+    "private_evidence_reference": "<PRIVATE_EVIDENCE_PATH>"
+   },
+   "expect": {
+    "valid": true,
+    "level": "L3",
+    "attested": [
+     "cold_boot",
+     "entry_loss"
+    ],
+    "expired": false,
+    "next": null,
+    "expires_utc": "2026-12-20T08:00:00Z"
+   }
+  },
+  {
+   "name": "超过 30 天 → 标记过期",
+   "now": "2026-12-21T00:00:00Z",
+   "evidence": {
+    "schema_version": 3,
+    "request_id": "00000000000000000000000000000000",
+    "route": "B",
+    "component": "system",
+    "target_alias": "guest-example",
+    "config_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "conditions": {
+     "browser_used": true,
+     "remote_management": true
+    },
+    "level_claimed": null,
+    "captured_utc": null,
+    "checks": {
+     "egress_dual": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "dns": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "stability": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "ipv6": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "browser_webrtc": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "cold_boot": {
+      "status": "user_attested",
+      "method": "",
+      "captured_utc": "2026-11-20T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "reload_failure": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "entry_loss": {
+      "status": "user_attested",
+      "method": "",
+      "captured_utc": "2026-11-20T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "management_ssh": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "wan_capture": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "guest_policy": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "udp": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "second_nic": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "existing_connections": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     }
+    },
+    "private_evidence_reference": "<PRIVATE_EVIDENCE_PATH>"
+   },
+   "expect": {
+    "valid": true,
+    "level": "L3",
+    "attested": [
+     "cold_boot",
+     "entry_loss"
+    ],
+    "expired": true,
+    "next": null
+   }
+  },
+  {
+   "name": "配置代际变化 → config_changed",
+   "now": "2026-11-28T00:00:00Z",
+   "evidence": {
+    "schema_version": 3,
+    "request_id": "00000000000000000000000000000000",
+    "route": "B",
+    "component": "system",
+    "target_alias": "guest-example",
+    "config_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "conditions": {
+     "browser_used": true,
+     "remote_management": true
+    },
+    "level_claimed": null,
+    "captured_utc": null,
+    "checks": {
+     "egress_dual": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "dns": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "stability": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "ipv6": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "browser_webrtc": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "cold_boot": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "reload_failure": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "entry_loss": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "management_ssh": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "wan_capture": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "guest_policy": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "udp": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "second_nic": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "existing_connections": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     }
+    },
+    "private_evidence_reference": "<PRIVATE_EVIDENCE_PATH>"
+   },
+   "expect": {
+    "valid": true,
+    "level": "L3",
+    "attested": [],
+    "expired": false,
+    "next": null,
+    "config_changed": true
+   },
+   "current_config_sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+  },
+  {
+   "name": "B 的 UDP 为 unknown → 停在 L2",
+   "now": "2026-11-28T00:00:00Z",
+   "evidence": {
+    "schema_version": 3,
+    "request_id": "00000000000000000000000000000000",
+    "route": "B",
+    "component": "system",
+    "target_alias": "guest-example",
+    "config_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "conditions": {
+     "browser_used": true,
+     "remote_management": true
+    },
+    "level_claimed": null,
+    "captured_utc": null,
+    "checks": {
+     "egress_dual": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "dns": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "stability": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "ipv6": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "browser_webrtc": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "cold_boot": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "reload_failure": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "entry_loss": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "management_ssh": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "wan_capture": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "guest_policy": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "udp": {
+      "status": "unknown",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "second_nic": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "existing_connections": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     }
+    },
+    "private_evidence_reference": "<PRIVATE_EVIDENCE_PATH>"
+   },
+   "expect": {
+    "valid": true,
+    "level": "L2",
+    "attested": [],
+    "expired": false,
+    "next": {
+     "level": "L3",
+     "check": "udp"
+    }
+   }
+  },
+  {
+   "name": "缺三时段稳定 → 未达 L0",
+   "now": "2026-11-28T00:00:00Z",
+   "evidence": {
+    "schema_version": 3,
+    "request_id": "00000000000000000000000000000000",
+    "route": "A2",
+    "component": "system",
+    "target_alias": "guest-example",
+    "config_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "conditions": {
+     "browser_used": false,
+     "remote_management": false
+    },
+    "level_claimed": null,
+    "captured_utc": null,
+    "checks": {
+     "egress_dual": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "dns": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     }
+    },
+    "private_evidence_reference": "<PRIVATE_EVIDENCE_PATH>"
+   },
+   "expect": {
+    "valid": true,
+    "level": null,
+    "attested": [],
+    "expired": false,
+    "next": {
+     "level": "L0",
+     "check": "stability"
+    }
+   }
+  },
+  {
+   "name": "A2 不用浏览器、本地管理 → L2（条件项不要求）",
+   "now": "2026-11-28T00:00:00Z",
+   "evidence": {
+    "schema_version": 3,
+    "request_id": "00000000000000000000000000000000",
+    "route": "A2",
+    "component": "system",
+    "target_alias": "guest-example",
+    "config_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "conditions": {
+     "browser_used": false,
+     "remote_management": false
+    },
+    "level_claimed": null,
+    "captured_utc": null,
+    "checks": {
+     "egress_dual": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "dns": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "stability": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "ipv6": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "cold_boot": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "reload_failure": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "entry_loss": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     }
+    },
+    "private_evidence_reference": "<PRIVATE_EVIDENCE_PATH>"
+   },
+   "expect": {
+    "valid": true,
+    "level": "L2",
+    "attested": [],
+    "expired": false,
+    "next": null
+   }
+  },
+  {
+   "name": "A2 用浏览器但没测 WebRTC → 停在 L0",
+   "now": "2026-11-28T00:00:00Z",
+   "evidence": {
+    "schema_version": 3,
+    "request_id": "00000000000000000000000000000000",
+    "route": "A2",
+    "component": "system",
+    "target_alias": "guest-example",
+    "config_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "conditions": {
+     "browser_used": true,
+     "remote_management": false
+    },
+    "level_claimed": null,
+    "captured_utc": null,
+    "checks": {
+     "egress_dual": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "dns": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "stability": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "ipv6": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "cold_boot": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "reload_failure": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "entry_loss": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     }
+    },
+    "private_evidence_reference": "<PRIVATE_EVIDENCE_PATH>"
+   },
+   "expect": {
+    "valid": true,
+    "level": "L0",
+    "attested": [],
+    "expired": false,
+    "next": {
+     "level": "L1",
+     "check": "browser_webrtc"
+    }
+   }
+  },
+  {
+   "name": "A1 Web 全过 → L1（封顶）",
+   "now": "2026-11-28T00:00:00Z",
+   "evidence": {
+    "schema_version": 3,
+    "request_id": "00000000000000000000000000000000",
+    "route": "A1",
+    "component": "web",
+    "target_alias": "guest-example",
+    "config_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "conditions": {
+     "browser_used": true
+    },
+    "level_claimed": null,
+    "captured_utc": null,
+    "checks": {
+     "egress_dual": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "dns": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "stability": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "browser_webrtc": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "app_fail_closed": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     }
+    },
+    "private_evidence_reference": "<PRIVATE_EVIDENCE_PATH>"
+   },
+   "expect": {
+    "valid": true,
+    "level": "L1",
+    "attested": [],
+    "expired": false,
+    "next": null
+   }
+  },
+  {
+   "name": "A1 CLI 不测 WebRTC 也能到 L1",
+   "now": "2026-11-28T00:00:00Z",
+   "evidence": {
+    "schema_version": 3,
+    "request_id": "00000000000000000000000000000000",
+    "route": "A1",
+    "component": "cli",
+    "target_alias": "guest-example",
+    "config_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "conditions": {},
+    "level_claimed": null,
+    "captured_utc": null,
+    "checks": {
+     "egress_dual": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "dns": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "stability": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "app_fail_closed": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "browser_webrtc": {
+      "status": "not_applicable",
+      "method": "",
+      "captured_utc": null,
+      "tool": "",
+      "raw_sha256": null,
+      "note": "CLI has no WebRTC"
+     }
+    },
+    "private_evidence_reference": "<PRIVATE_EVIDENCE_PATH>"
+   },
+   "expect": {
+    "valid": true,
+    "level": "L1",
+    "attested": [],
+    "expired": false,
+    "next": null
+   }
+  },
+  {
+   "name": "C1 原生出口 → 最高 L0",
+   "now": "2026-11-28T00:00:00Z",
+   "evidence": {
+    "schema_version": 3,
+    "request_id": "00000000000000000000000000000000",
+    "route": "C1",
+    "component": "system",
+    "target_alias": "guest-example",
+    "config_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "conditions": {},
+    "level_claimed": null,
+    "captured_utc": null,
+    "checks": {
+     "egress_dual": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "dns": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "stability": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     }
+    },
+    "private_evidence_reference": "<PRIVATE_EVIDENCE_PATH>"
+   },
+   "expect": {
+    "valid": true,
+    "level": "L0",
+    "attested": [],
+    "expired": false,
+    "next": null
+   }
+  },
+  {
+   "name": "必测项标 not_applicable → 无效",
+   "now": "2026-11-28T00:00:00Z",
+   "evidence": {
+    "schema_version": 3,
+    "request_id": "00000000000000000000000000000000",
+    "route": "B",
+    "component": "system",
+    "target_alias": "guest-example",
+    "config_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "conditions": {
+     "browser_used": true,
+     "remote_management": true
+    },
+    "level_claimed": null,
+    "captured_utc": null,
+    "checks": {
+     "egress_dual": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "dns": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "stability": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "ipv6": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "browser_webrtc": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "cold_boot": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "reload_failure": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "entry_loss": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "management_ssh": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "wan_capture": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "guest_policy": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "udp": {
+      "status": "not_applicable",
+      "method": "",
+      "captured_utc": null,
+      "tool": "",
+      "raw_sha256": null,
+      "note": "skip"
+     },
+     "second_nic": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "existing_connections": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     }
+    },
+    "private_evidence_reference": "<PRIVATE_EVIDENCE_PATH>"
+   },
+   "expect": {
+    "valid": false,
+    "error_contains": "udp: required by this profile"
+   }
+  },
+  {
+   "name": "非演练项用 user_attested → 无效",
+   "now": "2026-11-28T00:00:00Z",
+   "evidence": {
+    "schema_version": 3,
+    "request_id": "00000000000000000000000000000000",
+    "route": "B",
+    "component": "system",
+    "target_alias": "guest-example",
+    "config_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "conditions": {
+     "browser_used": true,
+     "remote_management": true
+    },
+    "level_claimed": null,
+    "captured_utc": null,
+    "checks": {
+     "egress_dual": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "dns": {
+      "status": "user_attested",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "stability": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "ipv6": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "browser_webrtc": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "cold_boot": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "reload_failure": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "entry_loss": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "management_ssh": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "wan_capture": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "guest_policy": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "udp": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "second_nic": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "existing_connections": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     }
+    },
+    "private_evidence_reference": "<PRIVATE_EVIDENCE_PATH>"
+   },
+   "expect": {
+    "valid": false,
+    "error_contains": "dns: user_attested is not allowed"
+   }
+  },
+  {
+   "name": "pass 缺时间戳 → 无效",
+   "now": "2026-11-28T00:00:00Z",
+   "evidence": {
+    "schema_version": 3,
+    "request_id": "00000000000000000000000000000000",
+    "route": "B",
+    "component": "system",
+    "target_alias": "guest-example",
+    "config_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "conditions": {
+     "browser_used": true,
+     "remote_management": true
+    },
+    "level_claimed": null,
+    "captured_utc": null,
+    "checks": {
+     "egress_dual": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "dns": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "stability": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "ipv6": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": null,
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "browser_webrtc": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "cold_boot": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "reload_failure": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "entry_loss": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "management_ssh": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "wan_capture": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "guest_policy": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "udp": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "second_nic": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "existing_connections": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     }
+    },
+    "private_evidence_reference": "<PRIVATE_EVIDENCE_PATH>"
+   },
+   "expect": {
+    "valid": false,
+    "error_contains": "ipv6:"
+   }
+  },
+  {
+   "name": "v2 证据 → 无效（需迁移）",
+   "now": "2026-11-28T00:00:00Z",
+   "evidence": {
+    "schema_version": 2,
+    "request_id": "00000000000000000000000000000000",
+    "route": "B",
+    "component": "system",
+    "target_alias": "guest-example",
+    "config_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "conditions": {
+     "browser_used": true,
+     "remote_management": true
+    },
+    "level_claimed": null,
+    "captured_utc": null,
+    "checks": {
+     "egress_dual": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "dns": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "stability": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "ipv6": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "browser_webrtc": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "cold_boot": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "reload_failure": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "entry_loss": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "management_ssh": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "wan_capture": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "guest_policy": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "udp": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "second_nic": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "existing_connections": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     }
+    },
+    "private_evidence_reference": "<PRIVATE_EVIDENCE_PATH>"
+   },
+   "expect": {
+    "valid": false,
+    "error_contains": "schema_version must be 3"
+   }
+  },
+  {
+   "name": "not_applicable 不写理由 → 无效",
+   "now": "2026-11-28T00:00:00Z",
+   "evidence": {
+    "schema_version": 3,
+    "request_id": "00000000000000000000000000000000",
+    "route": "B",
+    "component": "system",
+    "target_alias": "guest-example",
+    "config_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "conditions": {
+     "browser_used": true,
+     "remote_management": true
+    },
+    "level_claimed": null,
+    "captured_utc": null,
+    "checks": {
+     "egress_dual": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "dns": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "stability": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "ipv6": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "browser_webrtc": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "cold_boot": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "reload_failure": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "entry_loss": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "management_ssh": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "wan_capture": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "guest_policy": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "udp": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "second_nic": {
+      "status": "not_applicable",
+      "method": "",
+      "captured_utc": null,
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     },
+     "existing_connections": {
+      "status": "pass",
+      "method": "",
+      "captured_utc": "2026-11-25T08:00:00Z",
+      "tool": "",
+      "raw_sha256": null,
+      "note": ""
+     }
+    },
+    "private_evidence_reference": "<PRIVATE_EVIDENCE_PATH>"
+   },
+   "expect": {
+    "valid": false,
+    "error_contains": "needs a note"
+   }
+  }
+ ]
+}
