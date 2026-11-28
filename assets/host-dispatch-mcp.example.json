@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "host-dispatch": {
+      "command": "<GUEST_NODE_EXE>",
+      "args": [
+        "<GUEST_SHARE_ROOT>/tools/guest-host-dispatch-mcp.mjs"
+      ],
+      "env": {
+        "HOST_DISPATCH_SHARE_ROOT": "<GUEST_SHARE_ROOT>"
+      }
+    }
+  }
+}

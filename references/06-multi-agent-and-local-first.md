@@ -22,3 +22,31 @@
 获 B 档批准后用 [转换器](../scripts/to_md.py)：`python scripts/to_md.py <已审核源> --out <本地私有输出目录>`。Python 3.10+；按格式需要 Poppler、MarkItDown、LibreOffice。用来源可信的工具；对不可信文档在**无网、低权限、资源受限且不挂载私密文件**的环境转换。转换不是消毒；Markdown 仍是不可信输入，上传或交给云端 Agent 前先人工脱敏。
 
 输出位置只由输入路径摘要和格式确定；清单不决定读写路径，不记录源名和外部工具原始错误。全程单写者锁、同目录原子替换；读写路径含链接或重解析点、无输入、转换失败、锁被占用均非零。使用本地、仅操作者可写的输出根；不要和回传挂载共用，避免另一个进程从边界外修改缓存。旧格式清单会按新格式重建，不自动删除旧的 Markdown；转换失败不会把旧输出当作当前结果。核对清单结果再用 ripgrep 精读。
+
+## 可选进阶：客机 → 宿主机 Agent 任务分发（Host Dispatch）
+
+> **信任边界声明（C 档知情确认）**：本模块允许 VM 内的 Claude 主动向宿主机白名单 Agent（`codex` / `agy` / `dsh`）派发任务。启用它意味着扩大了客机对宿主机指定协作目录的影响面——**仅在隔离路线已验证且用户明确同意放开该协作目录时启用**，绝不向宿主机暴露任意 shell 执行权。
+
+### 1. 架构：零网络端口的共享目录队列 + 客机 MCP
+
+不开放任何 VM ↔ 宿主机网络端口（不破坏 VM 代理/防火墙隔离），全部经由共享目录 `dispatch/{pending,running,done,logs,cancel}` 流转：
+
+- **宿主机常驻分发器**：[host-dispatcher.mjs](../scripts/host-dispatcher.mjs)（`node scripts/host-dispatcher.mjs --share-root <HOST_SHARE_ROOT>`）。纯本地文件轮询（无任务零 token 消耗），建议挂载到宿主机 VM 启动脚本中**随 VM 开机同步拉起**，不空跑系统常驻服务。
+- **客机零依赖 MCP Server**：[guest-host-dispatch-mcp.mjs](../scripts/guest-host-dispatch-mcp.mjs)（配置模板见 [host-dispatch-mcp.example.json](../assets/host-dispatch-mcp.example.json)）。向客机 Claude 暴露 5 个工具：`host_health`、`host_dispatch`、`host_task_status`、`host_list_tasks`、`host_cancel_task`。
+- **白名单宿主机 CLI 映射**（均从 stdin 传入长 prompt 或超长落盘，避免命令行转义与长度上限）：
+  - `codex` → `codex exec --skip-git-repo-check -C <cwd> --approve-for-me -o <last_msg> -`（只读模式 `-s read-only`）
+  - `agy`（Antigravity） → `agy -p <prompt> --output-format json --mode auto --add-dir <cwd>`（只读模式 `--mode plan`）
+  - `dsh` → `dsh --profile headless -`（注意确认 `headless` profile 对应的模型凭证或默认 provider 已就绪）
+
+### 2. 强制安全护栏
+
+1. **白名单 Agent + 结构化参数**：只接受 `dsh` / `agy` / `codex`，拒绝任意命令执行；高危 `mode="full"` 默认硬禁用（仅宿主机显式设置 `DISPATCH_ALLOW_FULL=1` 才放行）。
+2. **目录越界与符号链接逃逸拦截**：所有任务 `cwd` 经 `realpath` 解析后必须严格位于 `--share-root` 内，否则直接写 `status: "rejected"`。
+3. **按目录写锁与并发/超时保护**：同一目录同时只允许一个写任务运行（不同作业目录可并发，默认 `MAX_CONC=2`）；默认超时 600s（上限 1800s），超时或 `host_cancel_task` 时清理整棵进程树。
+4. **防套娃死循环**：分发器自动注入上下文前缀，禁止宿主机 Agent 反向写回 `dispatch/` 或再向客机派活，并禁止 `git push` 到远端。
+5. **MCP 单次等待防超时**：`host_dispatch` 默认 `wait_sec=55`（避免 Claude Desktop MCP 调用超时），长任务超时未结束时返回 `running` + 最新日志尾部，由客机 Claude 继续用 `host_task_status` 续等。
+
+### 3. 反向调度（宿主机 → 客机 Claude）的取舍
+
+- 若客机仅安装 **Claude Desktop**（纯 GUI），无官方非交互 CLI，仅适合通过只读 `inbox-ro/` + 人工/定时任务异步消费，不推荐脆弱的 UI 模拟。
+- 若确需宿主机主动调用客机 Claude，应在客机安装官方 **Claude Code CLI**，经受控管理通道（如宿主机单向 SSH）调用 `claude -p`，并严格限制单并发与 `max_depth=1` 防双向死循环。
