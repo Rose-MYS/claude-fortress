@@ -2,7 +2,7 @@
 
 > 一句话：把 S1 那一堆检查项，换算成一个用户能说出口的等级——「我的环境在本机自测达到 Fortress L2」。
 >
-> 机器可读定义：[assets/levels.json](../assets/levels.json)｜证据示例：[assets/evidence-v3.example.json](../assets/evidence-v3.example.json)｜参考计算器：[scripts/fortress_level.py](../scripts/fortress_level.py)
+> 机器可读定义：[assets/levels.json](../assets/levels.json)｜离线报告页：[assets/evidence-report.html](../assets/evidence-report.html)｜证据示例：[assets/evidence-v3.example.json](../assets/evidence-v3.example.json)｜参考计算器：[scripts/fortress_level.py](../scripts/fortress_level.py)
 
 ---
 
@@ -66,7 +66,7 @@ python scripts/fortress_level.py <证据文件>.json --json --current-config-sha
 
 退出码：`0` 已判定（看输出里的等级），`2` 证据无效，`64` 用法错误。
 
-离线报告页（规划中，第 2 阶段）会读取同一份 `levels.json`，并且必须与 [tests/fixtures/levels/cases.json](../tests/fixtures/levels/cases.json) 里的全部用例结果一致。
+也可以用浏览器直接打开纯离线的 [assets/evidence-report.html](../assets/evidence-report.html)：拖入证据 v3（可同时拖入 [WebRTC 检测页](../assets/webrtc-probe.html)导出的 JSON，自动合并为 `browser_webrtc` 一项），页面会显示等级、逐级的检查项、还差哪几项，并能导出脱敏 Markdown 摘要。页面内嵌同一份 `levels.json`，CI 会核对它和 Python 计算器在 [tests/fixtures/levels/cases.json](../tests/fixtures/levels/cases.json) 的全部用例上结果一致。页面还会提示证据里疑似的公网 IP、邮箱、订阅链接和个人路径，但这只是提醒，分享前仍要自己检查。
 
 ## 6. 对外怎么说
 

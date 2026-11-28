@@ -24,13 +24,16 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 DEFAULT_LEVELS = ROOT / "assets" / "levels.json"
 SHA256_RE = re.compile(r"^[a-f0-9]{64}$")
 REQUEST_RE = re.compile(r"^[a-f0-9]{32}$")
+UTC_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,6})?Z$")
 PASSING = {"pass", "user_attested"}
 
 
 def parse_utc(value: str) -> dt.datetime:
-    if not isinstance(value, str) or not value.endswith("Z"):
+    if not isinstance(value, str) or not UTC_RE.match(value):
         raise ValueError(f"timestamp must be UTC ISO-8601 ending in Z: {value!r}")
-    return dt.datetime.fromisoformat(value[:-1] + "+00:00")
+    base, _, frac = value[:-1].partition(".")
+    ts = dt.datetime.strptime(base, "%Y-%m-%dT%H:%M:%S").replace(tzinfo=dt.timezone.utc)
+    return ts + dt.timedelta(microseconds=int(frac.ljust(6, "0"))) if frac else ts
 
 
 def iso(ts: dt.datetime) -> str:

@@ -332,3 +332,59 @@ class TestFortressLevels(unittest.TestCase):
             cli = subprocess.run([sys.executable, str(SCRIPTS / "fortress_level.py"), str(bad)],
                                  capture_output=True, text=True)
             self.assertEqual(cli.returncode, 2)
+
+
+class TestEvidenceReportPage(unittest.TestCase):
+    """assets/evidence-report.html must embed the current levels.json and agree with fortress_level.py."""
+
+    PAGE = ASSETS / "evidence-report.html"
+
+    def _script(self, script_id):
+        text = self.PAGE.read_text(encoding="utf-8")
+        m = re.search(r'<script[^>]*id="%s"[^>]*>(.*?)</script>' % re.escape(script_id), text, re.S)
+        self.assertIsNotNone(m, f"missing <script id={script_id}>")
+        return m.group(1)
+
+    def test_embedded_levels_match_assets(self):
+        embedded = json.loads(self._script("levels-data"))
+        self.assertEqual(embedded, json.loads((ASSETS / "levels.json").read_text(encoding="utf-8")),
+                         "re-embed assets/levels.json into evidence-report.html")
+
+    def test_page_is_offline(self):
+        text = self.PAGE.read_text(encoding="utf-8")
+        for needle in ("fetch(", "XMLHttpRequest", "WebSocket", "<script src", "<link rel=\"stylesheet\"", "import("):
+            self.assertNotIn(needle, text, f"report page must stay offline: found {needle}")
+
+    def test_js_engine_matches_python_on_shared_vectors(self):
+        node = shutil.which("node")
+        if not node:
+            self.skipTest("node not installed")
+        mod = _load_level_module()
+        levels = json.loads((ASSETS / "levels.json").read_text(encoding="utf-8"))
+        cases = json.loads((ROOT / "tests" / "fixtures" / "levels" / "cases.json").read_text(encoding="utf-8"))["cases"]
+        with tempfile.TemporaryDirectory() as tmp:
+            engine = pathlib.Path(tmp) / "engine.js"
+            engine.write_text(self._script("fortress-level-engine"), encoding="utf-8")
+            runner = pathlib.Path(tmp) / "run.js"
+            runner.write_text(
+                "const FL = require(process.argv[2]);\n"
+                "const fs = require('fs');\n"
+                "const levels = JSON.parse(fs.readFileSync(process.argv[3], 'utf8'));\n"
+                "const cases = JSON.parse(fs.readFileSync(process.argv[4], 'utf8')).cases;\n"
+                "const out = cases.map(c => FL.evaluate(c.evidence, levels, FL.parseUtc(c.now).ms,"
+                " c.current_config_sha256 === undefined ? null : c.current_config_sha256));\n"
+                "process.stdout.write(JSON.stringify(out));\n",
+                encoding="utf-8")
+            res = subprocess.run([node, str(runner), str(engine), str(ASSETS / "levels.json"),
+                                  str(ROOT / "tests" / "fixtures" / "levels" / "cases.json")],
+                                 capture_output=True, text=True, encoding="utf-8")
+            self.assertEqual(res.returncode, 0, res.stderr)
+            js_results = json.loads(res.stdout)
+        keys = ("valid", "profile", "level", "max_level", "missing_for_next", "attested", "expires_utc", "expired", "config_changed")
+        for case, js in zip(cases, js_results):
+            py = mod.evaluate(case["evidence"], levels, mod.parse_utc(case["now"]), case.get("current_config_sha256"))
+            with self.subTest(case=case["name"]):
+                self.assertEqual({k: js[k] for k in keys}, {k: py[k] for k in keys})
+                self.assertEqual(bool(js["errors"]), bool(py["errors"]))
+                if not case["expect"]["valid"]:
+                    self.assertTrue(any(case["expect"]["error_contains"] in e for e in js["errors"]), js["errors"])

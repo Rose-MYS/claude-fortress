@@ -2,7 +2,7 @@
 
 > In one line: turn the pile of S1 checks into a level a user can actually say out loud — "my environment self-tested at Fortress L2 on my own machine".
 >
-> Machine-readable definition: [assets/levels.json](../../assets/levels.json) | Evidence example: [assets/evidence-v3.example.json](../../assets/evidence-v3.example.json) | Reference calculator: [scripts/fortress_level.py](../../scripts/fortress_level.py)
+> Machine-readable definition: [assets/levels.json](../../assets/levels.json) | Offline report page: [assets/evidence-report.html](../../assets/evidence-report.html) | Evidence example: [assets/evidence-v3.example.json](../../assets/evidence-v3.example.json) | Reference calculator: [scripts/fortress_level.py](../../scripts/fortress_level.py)
 
 ---
 
@@ -66,7 +66,7 @@ python scripts/fortress_level.py <evidence>.json --json --current-config-sha256 
 
 Exit codes: `0` evaluated (see the level in the output), `2` invalid evidence, `64` usage error.
 
-The offline report page (planned, phase 2) will read the same `levels.json` and must match every case in [tests/fixtures/levels/cases.json](../../tests/fixtures/levels/cases.json).
+You can also open the offline [assets/evidence-report.html](../../assets/evidence-report.html) in a browser: drop in an evidence v3 file (optionally together with the JSON exported by the [WebRTC probe](../../assets/webrtc-probe.html), which is merged into `browser_webrtc`), and the page shows the level, every check per level, what is missing, and exports a redacted Markdown summary. It embeds the same `levels.json`, and CI verifies it matches the Python calculator on every case in [tests/fixtures/levels/cases.json](../../tests/fixtures/levels/cases.json). It also flags likely public IPs, emails, subscription links and personal paths in the evidence — a reminder only; still review before sharing.
 
 ## 6. How to Talk About It
 
