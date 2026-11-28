@@ -5,6 +5,7 @@ All notable changes to **Claude Fortress** are documented in this file.
 ## [Unreleased]
 
 ### Added
+- GoatCounter visit analytics for both language versions of the published interactive guide. The offline evidence report and WebRTC probe retain their existing network behavior.
 - **Offline evidence report page** (`assets/evidence-report.html`): drag in evidence v3 (plus an optional WebRTC probe JSON, merged into `browser_webrtc`) to see the level, per-level checks, what is missing, expiry / config-change / user-attested flags, and export a redacted Markdown summary. Bilingual, zero network; embeds `levels.json`, and CI runs its JS engine with Node against the shared vectors to match `scripts/fortress_level.py`.
 - **Fortress Level self-assessment standard** (`references/08-fortress-levels.md`, `references/en/08-fortress-levels.md`, `assets/levels.json`): four cumulative levels (L0 egress verified → L3 out-of-guest gateway, two layers), rated per route component, 30-day expiry, config-generation invalidation, and `user_attested` allowed only for negative drills. A self-assessment, never a certification; changes no gate.
 - **Evidence format v3** (`assets/evidence-v3.example.json`): per-check objects with status, method, UTC capture time, tool and raw-evidence hash; adds route/component, conditions and `user_attested` / `not_applicable` rules.
