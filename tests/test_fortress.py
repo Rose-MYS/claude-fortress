@@ -388,3 +388,101 @@ class TestEvidenceReportPage(unittest.TestCase):
                 self.assertEqual(bool(js["errors"]), bool(py["errors"]))
                 if not case["expect"]["valid"]:
                     self.assertTrue(any(case["expect"]["error_contains"] in e for e in js["errors"]), js["errors"])
+
+
+class TestRouteBOfflineCollectors(unittest.TestCase):
+    """Route B Tier-A offline collectors emit valid evidence v3 accepted by both Python and JS engines."""
+
+    FX = ROOT / "tests" / "fixtures" / "verify_offline"
+
+    def _assert_v3_and_report_agree(self, data):
+        mod = _load_level_module()
+        levels = json.loads((ASSETS / "levels.json").read_text(encoding="utf-8"))
+        self.assertEqual(data["schema_version"], 3)
+        self.assertEqual(data["route"], "B")
+        self.assertEqual(data["component"], "system")
+        self.assertEqual(set(data["checks"]), set(levels["checks"]))
+        py_res = mod.evaluate(data, levels)
+        self.assertTrue(py_res["valid"], py_res["errors"])
+        self.assertEqual(py_res["profile"], "B")
+        self.assertIsNone(py_res["level"], "offline collector alone must never claim a level")
+
+        node = shutil.which("node")
+        if node:
+            page_text = (ASSETS / "evidence-report.html").read_text(encoding="utf-8")
+            m = re.search(r'<script[^>]*id="fortress-level-engine"[^>]*>(.*?)</script>', page_text, re.S)
+            self.assertIsNotNone(m)
+            with tempfile.TemporaryDirectory() as tmp:
+                engine = pathlib.Path(tmp) / "engine.js"
+                engine.write_text(m.group(1), encoding="utf-8")
+                ev_file = pathlib.Path(tmp) / "ev.json"
+                ev_file.write_text(json.dumps(data), encoding="utf-8")
+                runner = pathlib.Path(tmp) / "run.js"
+                runner.write_text(
+                    "const FL = require(process.argv[2]);\n"
+                    "const fs = require('fs');\n"
+                    "const levels = JSON.parse(fs.readFileSync(process.argv[3], 'utf8'));\n"
+                    "const ev = JSON.parse(fs.readFileSync(process.argv[4], 'utf8'));\n"
+                    "process.stdout.write(JSON.stringify(FL.evaluate(ev, levels, Date.now(), null)));\n",
+                    encoding="utf-8",
+                )
+                r = subprocess.run([node, str(runner), str(engine), str(ASSETS / "levels.json"), str(ev_file)],
+                                   capture_output=True, text=True, encoding="utf-8")
+                self.assertEqual(r.returncode, 0, r.stderr)
+                js_res = json.loads(r.stdout)
+                self.assertEqual(js_res["valid"], py_res["valid"])
+                self.assertEqual(js_res["profile"], py_res["profile"])
+                self.assertEqual(js_res["level"], py_res["level"])
+
+    @unittest.skipUnless(IS_WINDOWS, "Windows guest collector runs on PowerShell")
+    def test_windows_guest_collector_pass_and_fail_fixtures(self):
+        script = SCRIPTS / "verify-offline-route-b-guest.ps1"
+        r_pass = subprocess.run(
+            ["powershell", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
+             "-File", str(script), "-FixturePath", str(self.FX / "guest_pass.json")],
+            capture_output=True, text=True, encoding="utf-8",
+        )
+        self.assertEqual(r_pass.returncode, 0, r_pass.stderr)
+        d_pass = json.loads(r_pass.stdout)
+        self._assert_v3_and_report_agree(d_pass)
+        self.assertEqual(d_pass["checks"]["guest_policy"]["status"], "pass")
+        self.assertEqual(d_pass["checks"]["second_nic"]["status"], "pass")
+        self.assertEqual(d_pass["checks"]["ipv6"]["status"], "unknown")
+        self.assertEqual(d_pass["checks"]["app_fail_closed"]["status"], "not_applicable")
+
+        r_fail = subprocess.run(
+            ["powershell", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
+             "-File", str(script), "-FixturePath", str(self.FX / "guest_fail.json")],
+            capture_output=True, text=True, encoding="utf-8",
+        )
+        self.assertEqual(r_fail.returncode, 0, r_fail.stderr)
+        d_fail = json.loads(r_fail.stdout)
+        self._assert_v3_and_report_agree(d_fail)
+        self.assertEqual(d_fail["checks"]["guest_policy"]["status"], "fail")
+        self.assertEqual(d_fail["checks"]["second_nic"]["status"], "fail")
+        self.assertEqual(d_fail["checks"]["ipv6"]["status"], "fail")
+
+    @unittest.skipIf(IS_WINDOWS, "OpenWrt POSIX sh collector runs on Linux/macOS")
+    def test_openwrt_collector_pass_and_fail_fixtures(self):
+        script = SCRIPTS / "verify-offline-openwrt.sh"
+        r_pass = subprocess.run(
+            ["sh", str(script), "--fixture-dir", str(self.FX / "openwrt_pass")],
+            capture_output=True, text=True, encoding="utf-8",
+        )
+        self.assertEqual(r_pass.returncode, 0, r_pass.stderr)
+        d_pass = json.loads(r_pass.stdout)
+        self._assert_v3_and_report_agree(d_pass)
+        self.assertEqual(d_pass["checks"]["ipv6"]["status"], "unknown")
+        self.assertEqual(d_pass["checks"]["udp"]["status"], "unknown")
+        self.assertEqual(d_pass["checks"]["wan_capture"]["status"], "not_run")
+        self.assertEqual(d_pass["checks"]["app_fail_closed"]["status"], "not_applicable")
+
+        r_fail = subprocess.run(
+            ["sh", str(script), "--fixture-dir", str(self.FX / "openwrt_fail")],
+            capture_output=True, text=True, encoding="utf-8",
+        )
+        self.assertEqual(r_fail.returncode, 0, r_fail.stderr)
+        d_fail = json.loads(r_fail.stdout)
+        self._assert_v3_and_report_agree(d_fail)
+        self.assertEqual(d_fail["checks"]["ipv6"]["status"], "fail")
+        self.assertEqual(d_fail["checks"]["udp"]["status"], "fail")
