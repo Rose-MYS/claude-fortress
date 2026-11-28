@@ -15,7 +15,21 @@
 
 ## 2. Anti-Lockout Prechecks & Hardening (Tier-B / C)
 
-1. **Out-of-Band Recovery First (Mandatory Tier-C)**: Confirm your provider's Web Console / VNC works. Before loading new outbound `nftables` rules, verify the backup ruleset loads cleanly and arm a timed rollback (e.g., `systemd-run --on-active=3m nft -f /etc/nftables.backup.conf` on systemd hosts). Keep your old session open, open a **brand-new SSH connection** to verify key auth, permissions, and egress/negative checks, and only then cancel the rollback timer.
+1. **Out-of-Band Recovery & Anti-Lockout Apply (Mandatory Tier-C)**:
+   - Confirm your provider's Web Console / VNC works. Note that minimal Debian / Ubuntu cloud images often do **not** pre-install `nftables`; verify `command -v nft` first (install via `apt-get update && apt-get install -y nftables` if missing).
+   - For Mode C2, use the bundled parameterized template [../../assets/vps-c2-egress.nft.tmpl](../../assets/vps-c2-egress.nft.tmpl) (atomically replaces only `inet cf_vps_c2`, never global flush) and anti-lockout loader [../../scripts/vps-c2-apply-with-rollback.sh](../../scripts/vps-c2-apply-with-rollback.sh) (live-tested on Debian 12 + `systemd` for DryRun, syntax rejection, timed auto-rollback, and timer cancellation):
+     ```sh
+     # 1) Render placeholders (<MGMT_SSH_CIDR>, <SSH_PORT>, <ENTRY_IP>, <ENTRY_PORT>) and dry-run
+     sh scripts/vps-c2-apply-with-rollback.sh --rules /etc/claude-fortress/vps-c2.nft --dry-run
+
+     # 2) After Tier-C approval, apply with a 180s auto-rollback timer (backs up existing table first)
+     sudo sh scripts/vps-c2-apply-with-rollback.sh --rules /etc/claude-fortress/vps-c2.nft --timeout 180s --confirm-tier-c
+
+     # 3) Keep your old session open, open a brand-new SSH session, verify counters & egress:
+     sudo nft list counters table inet cf_vps_c2
+     #    Only after verification passes, cancel the rollback timer:
+     sudo systemctl stop cf-vps-c2-rollback.timer
+     ```
 2. **SSH & OS Hardening**: Key-only SSH, disable password auth, `MaxAuthTries 3`, `fail2ban`, and unattended security updates.
 3. **IPv6 & Timezone**: Disable IPv6 egress in both kernel and proxy if using IPv4-only; align timezone with the egress region (`timedatectl set-timezone <TZ>`).
 

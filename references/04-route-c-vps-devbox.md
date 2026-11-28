@@ -15,7 +15,21 @@
 
 ## 2. 防锁死前置与基础加固（B / C 档）
 
-1. **带外恢复前置（C 档必做）**：确认云商 Web Console / VNC 可用；加载新 `nftables` 出站规则前先起一个延时自动回滚任务（如 `systemd-run --on-active=3m nft -f /etc/nftables.backup.conf`），保持旧会话，另外建立一条全新的 SSH 连接并验证密钥、权限和预期出口/负向防直连后才取消定时器；回滚文件必须先能独立加载，且系统确实使用 systemd。
+1. **带外恢复前置与一键防锁死加载（C 档必做）**：
+   - 先确认云商 Web Console / VNC 可用；注意最小化 Debian / Ubuntu 云镜像默认可能未预装 `nftables`，先确认 `command -v nft`（缺失则先 `apt-get update && apt-get install -y nftables`）。
+   - 模式 C2 可直接使用本包内置的通用模板 [../assets/vps-c2-egress.nft.tmpl](../assets/vps-c2-egress.nft.tmpl)（原子替换自有表 `inet cf_vps_c2`，不全局 flush）与防锁死脚本 [../scripts/vps-c2-apply-with-rollback.sh](../scripts/vps-c2-apply-with-rollback.sh)（已在 Debian 12 + `systemd` 实机验证 DryRun、坏语法拦截、超时自动回滚与取消回滚常驻）：
+     ```sh
+     # 1）先替换模板占位符（<MGMT_SSH_CIDR> / <SSH_PORT> / <ENTRY_IP> / <ENTRY_PORT>）并做离线语法预检
+     sh scripts/vps-c2-apply-with-rollback.sh --rules /etc/claude-fortress/vps-c2.nft --dry-run
+
+     # 2）经 C 档确认后以 180 秒自动回滚窗口加载（自动备份原表并布防 cf-vps-c2-rollback.timer）
+     sudo sh scripts/vps-c2-apply-with-rollback.sh --rules /etc/claude-fortress/vps-c2.nft --timeout 180s --confirm-tier-c
+
+     # 3）保持旧会话，另开一条全新 SSH 验证密钥、权限与计数器：
+     sudo nft list counters table inet cf_vps_c2
+     #    全部核验通过后取消自动回滚（若不取消，到期自动还原，绝不锁死 SSH）：
+     sudo systemctl stop cf-vps-c2-rollback.timer
+     ```
 2. **SSH 与系统加固**：仅密钥登录、禁用密码、`MaxAuthTries 3`、`fail2ban`、开启自动安全更新。
 3. **IPv6 与时区**：若出口仅走 IPv4，在内核与代理侧同步禁用 IPv6 出口；时区对齐出口地区（`timedatectl set-timezone <TZ>`）。
 

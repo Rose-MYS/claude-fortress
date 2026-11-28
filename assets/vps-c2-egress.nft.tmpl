@@ -1,0 +1,35 @@
+add table inet cf_vps_c2
+delete table inet cf_vps_c2
+
+table inet cf_vps_c2 {
+    counter denied_input {}
+    counter denied_output {}
+    counter denied_forward {}
+    counter allowed_ssh {}
+    counter allowed_proxy {}
+
+    chain input {
+        type filter hook input priority filter; policy drop;
+        meta nfproto ipv6 counter name denied_input drop
+        iifname "lo" accept
+        ct state established,related accept
+        ip saddr <MGMT_SSH_CIDR> tcp dport <SSH_PORT> counter name allowed_ssh accept
+        counter name denied_input drop
+    }
+
+    chain output {
+        type filter hook output priority filter; policy drop;
+        meta nfproto ipv6 counter name denied_output drop
+        oifname "lo" accept
+        ct state established,related accept
+        # To restrict new proxy connections by process owner, also match
+        # meta skuid <PROXY_UID> before the counter.
+        ip daddr <ENTRY_IP> tcp dport <ENTRY_PORT> counter name allowed_proxy accept
+        counter name denied_output drop
+    }
+
+    chain forward {
+        type filter hook forward priority filter; policy drop;
+        counter name denied_forward drop
+    }
+}
