@@ -788,6 +788,16 @@
     }
 
   </style>
+<script>
+if (location.origin === 'https://rose-mys.github.io' &&
+    location.pathname.startsWith('/claude-fortress/')) {
+  const analytics = document.createElement('script');
+  analytics.dataset.goatcounter = 'https://rose-mys.goatcounter.com/count';
+  analytics.async = true;
+  analytics.src = 'https://gc.zgo.at/count.js';
+  document.head.appendChild(analytics);
+}
+</script>
 </head>
 <body>
   <div class="wrap">
