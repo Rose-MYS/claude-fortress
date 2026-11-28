@@ -72,6 +72,10 @@ claude-fortress/
 └── scripts/                               # 7 hardened, parameterized scripts (PowerShell 5.1 & Python 3.10+)
 ```
 
+## Acknowledgments
+
+Claude Fortress was inspired by [**Claude-Guardian**](https://github.com/DUNHKpcc/Claude-Guardian) by DUNHKpcc and its community. Several core ideas here — starting from a "no contact with Claude/Anthropic" stage (Guardian's PC0), A/B/C authorization tiers, the confirmed / not-yet-checked / next-step reporting format, the offline WebRTC probe, and not binding a route on "you decide"-style replies — come from that project. Claude Fortress is an independent rewrite (no Guardian code or text is included) that focuses on out-of-guest isolation (OpenWrt default-deny gateway), S0–S4 evidence gates and on-your-machine self-verification. If you want broader coverage — subscriptions, payments, line optimization, device cleanup and a script-driven workflow — check out Claude-Guardian.
+
 ## Publishing & License
 
 Original code and documentation in this directory are licensed under the [MIT License](LICENSE). See [Release & Attribution Checklist](references/en/release-review.md). Never commit real values, credentials, personal identifiers, logs, or unvetted third-party archives. Always comply with your actual jurisdiction's laws and official service terms; login, payment, and appeals must be performed directly by the user.
