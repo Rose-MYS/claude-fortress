@@ -1,0 +1,11 @@
+{
+  "config_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "target_alias": "guest-route-b-fail",
+  "browser_used": true,
+  "remote_management": true,
+  "policy_ok": false,
+  "issue_codes": ["PROFILE_Public", "EXTRA_ENABLED_ALLOW"],
+  "expected_adapters": ["Ethernet0", "Mihomo"],
+  "active_adapters": ["Ethernet0", "Mihomo", "Ethernet1"],
+  "ipv6_enabled_adapters": ["Ethernet0"]
+}

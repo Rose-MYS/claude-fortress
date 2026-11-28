@@ -1,0 +1,121 @@
+{
+  "now": "2026-12-01T00:00:00Z",
+  "defaults": {
+    "schema_version": 3,
+    "route": "B",
+    "component": "system",
+    "captured_utc": "2026-11-28T12:00:00Z",
+    "checks": {}
+  },
+  "documents": {
+    "guest": {
+      "request_id": "11111111111111111111111111111111",
+      "target_alias": "guest",
+      "config_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "conditions": {"browser_used": false, "remote_management": true},
+      "checks": {
+        "ipv6": {"status": "unknown", "captured_utc": "2026-11-28T11:00:00Z", "note": "guest IPv6 inspection"},
+        "guest_policy": {"status": "pass", "captured_utc": "2026-11-28T11:00:00Z"},
+        "udp": {"status": "not_run"},
+        "wan_capture": {"status": "not_run", "note": "guest skipped"},
+        "app_fail_closed": {"status": "not_applicable", "note": "guest policy is system-level"},
+        "egress_dual": {"status": "pass", "captured_utc": "2026-11-28T11:00:00.0011Z"},
+        "dns": {"status": "pass", "captured_utc": "2026-11-28T11:00:00Z"},
+        "stability": {"status": "pass", "captured_utc": "2026-11-28T11:00:00Z"},
+        "browser_webrtc": {"status": "not_applicable", "note": "browser disabled on guest"}
+      }
+    },
+    "gateway": {
+      "request_id": "22222222222222222222222222222222",
+      "target_alias": "网关",
+      "config_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "captured_utc": "2026-11-28T12:00:00.005Z",
+      "conditions": {"browser_used": true, "remote_management": false},
+      "checks": {
+        "ipv6": {"status": "unknown", "captured_utc": "2026-11-28T10:00:00Z", "note": "gateway IPv6 inspection"},
+        "guest_policy": {"status": "not_run"},
+        "udp": {"status": "unknown", "note": "gateway UDP inspection"},
+        "wan_capture": {"status": "not_run", "note": "gateway skipped"},
+        "app_fail_closed": {"status": "not_applicable", "note": "gateway policy is system-level"},
+        "egress_dual": {
+          "status": "pass",
+          "method": "dual endpoints",
+          "tool": "test collector",
+          "raw_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          "captured_utc": "2026-11-28T11:00:00.00109Z",
+          "note": "both endpoints agree"
+        },
+        "browser_webrtc": {"status": "pass", "captured_utc": "2026-11-28T11:00:00Z"}
+      }
+    },
+    "third": {
+      "request_id": "33333333333333333333333333333333",
+      "target_alias": "secondary",
+      "config_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "checks": {
+        "egress_dual": {"status": "fail", "note": "egress differs"},
+        "cold_boot": {"status": "user_attested", "captured_utc": "2026-11-28T11:00:00Z"}
+      }
+    },
+    "mismatch": {
+      "route": "A2",
+      "request_id": "33333333333333333333333333333333",
+      "target_alias": "other-route",
+      "config_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+    },
+    "other_component": {
+      "component": "web",
+      "request_id": "33333333333333333333333333333333",
+      "target_alias": "other-component",
+      "config_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+    },
+    "merged": {"sources": []},
+    "v2": {"schema_version": 2}
+  },
+  "cases": [
+    {
+      "name": "guest and gateway with stricter conditions, earliest record and neutral statuses",
+      "inputs": ["gateway", "guest"],
+      "current_config": "guest",
+      "checks_from": {
+        "ipv6": "gateway",
+        "guest_policy": "guest",
+        "udp": "gateway",
+        "wan_capture": "guest",
+        "app_fail_closed": "guest",
+        "egress_dual": "gateway",
+        "browser_webrtc": "gateway"
+      },
+      "level": "L0",
+      "config_changed": false
+    },
+    {
+      "name": "fail beats pass across three sources, repeated config digest and new configuration",
+      "inputs": ["third", "guest", "gateway"],
+      "current_config": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "checks_from": {"egress_dual": "third", "cold_boot": "third"},
+      "level": null,
+      "config_changed": true
+    },
+    {
+      "name": "the combined hash also matches",
+      "inputs": ["guest", "gateway"],
+      "current_config": "merged",
+      "level": "L0",
+      "config_changed": false
+    },
+    {
+      "name": "the gateway source hash also matches",
+      "inputs": ["guest", "gateway"],
+      "current_config": "gateway",
+      "level": "L0",
+      "config_changed": false
+    },
+    {"name": "route mismatch", "inputs": ["guest", "mismatch"], "error": "cannot merge: route/component mismatch"},
+    {"name": "component mismatch", "inputs": ["guest", "other_component"], "error": "cannot merge: route/component mismatch"},
+    {"name": "duplicate request ID", "inputs": ["guest", "guest"], "error": "cannot merge: duplicate request_id"},
+    {"name": "already merged", "inputs": ["guest", "merged"], "error": "cannot merge: input is already merged"},
+    {"name": "not v3", "inputs": ["guest", "v2"], "error": "cannot merge: schema_version must be 3"},
+    {"name": "not enough inputs", "inputs": ["guest"], "error": "cannot merge: at least two evidence files required"}
+  ]
+}

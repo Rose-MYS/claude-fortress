@@ -1,0 +1,11 @@
+{
+  "config_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "target_alias": "guest-route-b-pass",
+  "browser_used": true,
+  "remote_management": true,
+  "policy_ok": true,
+  "issue_codes": [],
+  "expected_adapters": ["Ethernet0", "Mihomo"],
+  "active_adapters": ["Ethernet0", "Mihomo"],
+  "ipv6_enabled_adapters": []
+}

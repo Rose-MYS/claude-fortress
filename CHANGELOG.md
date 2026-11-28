@@ -5,6 +5,8 @@ All notable changes to **Claude Fortress** are documented in this file.
 ## [Unreleased]
 
 ### Added
+- **Route B Tier-A offline collectors (evidence v3)** (`scripts/verify-offline-route-b-guest.ps1`, `scripts/verify-offline-openwrt.sh`): zero-new-runtime read-only collectors for Windows 11 guest (PowerShell 5.1) and OpenWrt gateway (POSIX `ash`/`sh`) emitting desensitized v3 JSON directly consumable by `scripts/fortress_level.py` and `assets/evidence-report.html`, with cross-platform fixture tests (`tests/fixtures/verify_offline/`).
+- **Multi-source evidence v3**: combine same-route, same-component files in the host calculator or the offline report. The merge keeps the worst result per check and records its source. The page supports adding and removing files and exporting the merged JSON. The configuration check accepts the combined digest or any source digest.
 - GoatCounter visit analytics for both language versions of the published interactive guide. The offline evidence report and WebRTC probe retain their existing network behavior.
 - **Offline evidence report page** (`assets/evidence-report.html`): drag in evidence v3 (plus an optional WebRTC probe JSON, merged into `browser_webrtc`) to see the level, per-level checks, what is missing, expiry / config-change / user-attested flags, and export a redacted Markdown summary. Bilingual, zero network; embeds `levels.json`, and CI runs its JS engine with Node against the shared vectors to match `scripts/fortress_level.py`.
 - **Fortress Level self-assessment standard** (`references/08-fortress-levels.md`, `references/en/08-fortress-levels.md`, `assets/levels.json`): four cumulative levels (L0 egress verified → L3 out-of-guest gateway, two layers), rated per route component, 30-day expiry, config-generation invalidation, and `user_attested` allowed only for negative drills. A self-assessment, never a certification; changes no gate.
@@ -16,7 +18,12 @@ All notable changes to **Claude Fortress** are documented in this file.
 - **Repository Governance** (`AGENTS.md`, `CHANGELOG.md`): unified contributor/coding-agent rules, including *"field verification is a sample, not certification"*.
 
 ### Changed
+- **Route B IPv6 limits**: reference 08 (English and Chinese) documents the WAN-side IPv6 evidence still needed for L1 and the planned Tier-B neutral-probe collector.
 - **Delegated-Reply Route Gate** (`SKILL.md`, `SKILL.zh-CN.md`): explicitly clarify that replies like *"up to you"* or *"whatever works"* never bind a route automatically — the Agent must propose one concrete option and wait for explicit user acceptance.
+
+### Fixed
+- **OpenWrt evidence**: flag forward-chain accepts without a TCP restriction and unverified chain transfers as possible UDP paths. Missing or unreadable rules files stop collection with exit code 2.
+- **Windows guest evidence**: emit UTC timestamps with invariant formatting across system cultures.
 
 ---
 

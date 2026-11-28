@@ -47,6 +47,8 @@
     .chip.ok { color: var(--ok); background: var(--ok-bg); border-color: rgba(61,220,151,.3); }
     .chip.bad { color: var(--bad); background: var(--bad-bg); border-color: rgba(255,122,122,.35); }
     .chip.warn { color: var(--warn); background: var(--warn-bg); border-color: rgba(245,196,81,.35); }
+    .chip button { border: 0; background: transparent; color: inherit; cursor: pointer; font: inherit; padding: 2px 4px; margin-left: 4px; }
+    .btn[hidden] { display: none; }
     .verdict { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; }
     .badge { min-width: 112px; height: 112px; border-radius: 26px; display: grid; place-items: center; text-align: center; font-weight: 800; font-size: 40px; letter-spacing: -.02em;
       background: linear-gradient(145deg, #2b4cc9, #4f7cff 55%, #3ddc97); box-shadow: 0 14px 34px -14px rgba(79,124,255,.8); color: #fff; padding: 8px; }
@@ -171,20 +173,140 @@
     var REQUEST_RE = /^[a-f0-9]{32}$/;
     var UTC_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,6})?Z$/;
     var PASSING = { pass: true, user_attested: true };
+    var MERGE_PRIORITY = { fail: 0, unknown: 1, user_attested: 2, pass: 3, not_applicable: 4, not_run: 5 };
+    var SOURCE_FIELDS = ['request_id', 'target_alias', 'config_sha256', 'captured_utc'];
+    function has(object, key) { return Object.prototype.hasOwnProperty.call(object, key); }
+    function isObject(value) { return value !== null && typeof value === 'object' && !Array.isArray(value); }
 
     function parseUtc(value) {
-      if (typeof value !== 'string' || !UTC_RE.test(value)) {
+      if (typeof value !== 'string' || !value.endsWith('Z') || !UTC_RE.test(value)) {
         throw new Error('timestamp must be UTC ISO-8601 ending in Z: ' + JSON.stringify(value === undefined ? null : value));
       }
       var base = value.slice(0, 19);
       var frac = value.length > 20 ? value.slice(20, -1) : '';
       var ms = Date.parse(base + 'Z');
-      if (isNaN(ms)) throw new Error('timestamp must be UTC ISO-8601 ending in Z: ' + JSON.stringify(value));
+      if (isNaN(ms) || base.slice(0, 4) === '0000' || iso(ms) !== base + 'Z') {
+        throw new Error('timestamp must be UTC ISO-8601 ending in Z: ' + JSON.stringify(value));
+      }
       var micros = frac ? parseInt((frac + '000000').slice(0, 6), 10) : 0;
       return { ms: ms, micros: micros };
     }
     function cmp(a, b) { return a.ms !== b.ms ? a.ms - b.ms : a.micros - b.micros; }
     function iso(ms) { return new Date(ms).toISOString().slice(0, 19) + 'Z'; }
+
+    // SHA-256 compression and padding per FIPS 180-4. This also runs on file://.
+    function sha256(text) {
+      var constants = [
+        0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
+        0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
+        0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+        0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
+        0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
+        0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+        0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
+        0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
+      ];
+      var hash = new Uint32Array([0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19]);
+      var input = new TextEncoder().encode(text);
+      var padded = new Uint8Array(Math.ceil((input.length + 9) / 64) * 64);
+      padded.set(input);
+      padded[input.length] = 0x80;
+      var view = new DataView(padded.buffer);
+      view.setUint32(padded.length - 8, Math.floor(input.length / 0x20000000));
+      view.setUint32(padded.length - 4, input.length * 8);
+      var words = new Uint32Array(64);
+      function rotr(word, bits) { return (word >>> bits) | (word << (32 - bits)); }
+      for (var offset = 0; offset < padded.length; offset += 64) {
+        for (var i = 0; i < 16; i++) words[i] = view.getUint32(offset + i * 4);
+        for (var i = 16; i < 64; i++) {
+          var x = words[i - 15], y = words[i - 2];
+          var s0 = rotr(x, 7) ^ rotr(x, 18) ^ (x >>> 3);
+          var s1 = rotr(y, 17) ^ rotr(y, 19) ^ (y >>> 10);
+          words[i] = words[i - 16] + s0 + words[i - 7] + s1;
+        }
+        var [a, b, c, d, e, f, g, h] = hash;
+        for (var i = 0; i < 64; i++) {
+          var sum1 = rotr(e, 6) ^ rotr(e, 11) ^ rotr(e, 25);
+          var choose = (e & f) ^ (~e & g);
+          var t1 = (h + sum1 + choose + constants[i] + words[i]) | 0;
+          var sum0 = rotr(a, 2) ^ rotr(a, 13) ^ rotr(a, 22);
+          var majority = (a & b) ^ (a & c) ^ (b & c);
+          h = g; g = f; f = e; e = (d + t1) | 0;
+          d = c; c = b; b = a; a = (t1 + sum0 + majority) | 0;
+        }
+        [a, b, c, d, e, f, g, h].forEach(function (word, i) { hash[i] += word; });
+      }
+      return Array.from(hash, function (word) { return word.toString(16).padStart(8, '0'); }).join('');
+    }
+
+    function mergeEvidence(evidences) {
+      function fail(reason) { return { merged: null, errors: ['cannot merge: ' + reason] }; }
+      if (evidences.length < 2) return fail('at least two evidence files required');
+      if (evidences.some(function (ev) { return !isObject(ev) || ev.schema_version !== 3; })) return fail('schema_version must be 3');
+      var first = evidences[0];
+      if (evidences.some(function (ev) { return ev.route !== first.route || ev.component !== first.component; })) return fail('route/component mismatch');
+      if (evidences.some(function (ev) { return has(ev, 'sources'); })) return fail('input is already merged');
+
+      var ids = new Set();
+      for (var ev of evidences) {
+        if (!SOURCE_FIELDS.concat(['route', 'component']).every(function (key) { return typeof ev[key] === 'string'; }) ||
+            !REQUEST_RE.test(ev.request_id) || ev.request_id.length !== 32 ||
+            !SHA256_RE.test(ev.config_sha256) || ev.config_sha256.length !== 64) return fail('invalid source metadata');
+        if (ids.has(ev.request_id)) return fail('duplicate request_id');
+        ids.add(ev.request_id);
+      }
+
+      var inputs = evidences.slice().sort(function (a, b) { return a.request_id < b.request_id ? -1 : 1; });
+      var conditions = { browser_used: false, remote_management: false };
+      var picks = Object.create(null), latest = null, latestUtc = null;
+      for (var ev of inputs) {
+        var captured;
+        try { captured = parseUtc(ev.captured_utc); } catch (_) { return fail('invalid source timestamp'); }
+        if (latest === null || cmp(captured, latest) > 0) { latest = captured; latestUtc = ev.captured_utc; }
+
+        var sourceConditions = has(ev, 'conditions') ? ev.conditions : {};
+        if (!isObject(sourceConditions)) return fail('invalid source conditions');
+        for (var key of Object.keys(sourceConditions)) {
+          if (!has(conditions, key) || typeof sourceConditions[key] !== 'boolean') return fail('invalid source conditions');
+          conditions[key] = conditions[key] || sourceConditions[key];
+        }
+
+        if (!isObject(ev.checks)) return fail('checks must be an object');
+        for (var cid of Object.keys(ev.checks)) {
+          var item = ev.checks[cid], status = isObject(item) ? item.status : null;
+          if (typeof status !== 'string' || !has(MERGE_PRIORITY, status)) return fail('invalid status for ' + cid);
+          var note = has(item, 'note') ? item.note : '';
+          if (typeof note !== 'string' || (status === 'not_applicable' && !note.trim())) return fail('invalid note for ' + cid);
+          try {
+            captured = item.captured_utc != null || PASSING[status] ? parseUtc(item.captured_utc) : null;
+          } catch (_) { return fail('invalid timestamp for ' + cid); }
+          var priority = MERGE_PRIORITY[status], previous = picks[cid];
+          if (!previous || priority < previous.priority ||
+              (priority === previous.priority && status !== 'not_applicable' && captured &&
+               (!previous.captured || cmp(captured, previous.captured) < 0))) {
+            picks[cid] = { priority: priority, captured: captured, item: { ...item, note: '[from ' + ev.target_alias + '] ' + note } };
+          }
+        }
+      }
+
+      var sources = inputs.map(function (ev) {
+        return Object.fromEntries(SOURCE_FIELDS.map(function (key) { return [key, ev[key]]; }));
+      });
+      return { merged: {
+        schema_version: 3,
+        request_id: sha256(sources.map(function (ev) { return ev.request_id; }).join('\n')).slice(0, 32),
+        route: first.route,
+        component: first.component,
+        target_alias: sources.map(function (ev) { return ev.target_alias; }).join('+'),
+        config_sha256: sha256(sources.map(function (ev) { return ev.config_sha256; }).sort().join('\n')),
+        conditions: conditions,
+        level_claimed: null,
+        captured_utc: latestUtc,
+        checks: Object.fromEntries(Object.keys(picks).sort().map(function (cid) { return [cid, picks[cid].item]; })),
+        private_evidence_reference: '<PRIVATE_EVIDENCE_PATH>',
+        sources: sources
+      }, errors: [] };
+    }
 
     function findProfile(levels, route, component) {
       var names = Object.keys(levels.profiles);
@@ -219,7 +341,7 @@
       result.profile = name; result.max_level = prof.max_level;
       var conditions = evidence.conditions || {};
       Object.keys(conditions).forEach(function (k) {
-        if (!(k in levels.conditions)) errors.push('unknown condition: ' + k);
+        if (!has(levels.conditions, k)) errors.push('unknown condition: ' + k);
         else if (typeof conditions[k] !== 'boolean') errors.push('condition ' + k + ' must be true/false');
       });
       var checks = evidence.checks;
@@ -229,8 +351,8 @@
       perLevel.forEach(function (pl) { pl[1].forEach(function (c) { allRequired[c] = true; }); });
       Object.keys(checks).forEach(function (cid) {
         var item = checks[cid];
-        if (!(cid in levels.checks)) { errors.push('unknown check: ' + cid); return; }
-        if (!item || typeof item !== 'object' || !(item.status in levels.statuses)) {
+        if (!has(levels.checks, cid)) { errors.push('unknown check: ' + cid); return; }
+        if (!isObject(item) || !has(levels.statuses, item.status)) {
           errors.push(cid + ': status must be one of ' + JSON.stringify(Object.keys(levels.statuses).sort())); return;
         }
         var status = item.status;
@@ -265,7 +387,12 @@
         result.expires_utc = iso(expMs);
         result.expired = nowMs >= expMs + oldest.micros / 1000;
       }
-      if (currentConfigSha256 !== undefined && currentConfigSha256 !== null) result.config_changed = currentConfigSha256 !== evidence.config_sha256;
+      if (currentConfigSha256 !== undefined && currentConfigSha256 !== null) {
+        var matchedSource = Array.isArray(evidence.sources) && evidence.sources.some(function (source) {
+          return isObject(source) && source.config_sha256 === currentConfigSha256;
+        });
+        result.config_changed = currentConfigSha256 !== evidence.config_sha256 && !matchedSource;
+      }
       return result;
     }
 
@@ -285,7 +412,7 @@
       return true;
     }
 
-    return { evaluate: evaluate, parseUtc: parseUtc, mergeWebrtcProbe: mergeWebrtcProbe };
+    return { evaluate: evaluate, parseUtc: parseUtc, mergeEvidence: mergeEvidence, mergeWebrtcProbe: mergeWebrtcProbe };
   })();
   if (typeof module !== 'undefined' && module.exports) module.exports = FortressLevel;
   </script>
@@ -296,8 +423,8 @@
     var I18N = {
       zh: {
         title: 'Fortress Level 证据报告', offline: '纯离线 · 不联网',
-        subtitle: '把证据 v3 JSON 拖进来，算出你的隔离等级、还差哪几项、哪些是用户自述的。数据只在本页面里处理，不上传、不保存。',
-        guide: '交互路线图', inputTitle: '1. 载入证据', dropMain: '拖入 JSON 文件到这里', dropSub: '证据 v3（必需），可同时拖入 WebRTC 检测页导出的 JSON（可选）',
+        subtitle: '载入证据 v3，查看隔离等级、缺少的检查和用户自述项。数据只在当前页面处理。',
+        guide: '交互路线图', inputTitle: '1. 载入证据', dropMain: '拖入 JSON 文件到这里', dropSub: '可分批添加同路线、同组件的证据 v3，也可添加 WebRTC 检测结果。',
         pick: '选择文件…', pastePh: '或者把 JSON 粘贴到这里，然后点「解析」', parse: '解析', example: '载入演示数据', clear: '清空',
         optTitle: '2. 可选：当前配置哈希', cfgLabel: '填入现在这台机器上配置文件的 SHA-256，用来判断证据是不是旧配置测的',
         cfgHint: 'Windows：<code>Get-FileHash 配置文件 -Algorithm SHA256</code>；Linux/OpenWrt：<code>sha256sum 配置文件</code>。留空则不比较。',
@@ -309,7 +436,10 @@
         invalidSub: '先修正下面的问题再载入。', levelSub: '路线 {p}，最高可评 {max}', expires: '有效期至 {d}', expired: '已过期，需要重测',
         configChanged: '配置已变，需要重测', attested: '含用户自述：{list}', next: '离 {lvl} 还差 {n} 项', top: '已达到该路线最高等级',
         done: '已达到', blocked: '卡在这一级', locked: '未解锁', notInProfile: '本路线不评这一级',
-        loadedEvidence: '证据 v3', loadedProbe: 'WebRTC 检测结果已合并', parseError: '解析失败：{e}', unknownJson: '无法识别的 JSON（不是证据 v3，也不是 WebRTC 检测结果）',
+        loadedEvidence: '证据 v3', loadedProbe: 'WebRTC 检测结果', remove: '移除 {name}', downloadSingle: '下载证据 JSON',
+        readError: '无法读取文件：{name}', parseError: '解析失败：{e}', unknownJson: '无法识别的 JSON（需要证据 v3 或 WebRTC 检测结果）',
+        mergeMismatch: '无法合并：路线或组件不一致。', mergeNested: '无法合并：其中一份已经是合并后的证据。',
+        mergeDuplicate: '无法合并：request_id 重复。', mergeError: '无法合并：{error}',
         needEvidence: 'WebRTC 结果需要和证据 v3 一起载入', copied: '已复制', privacyWarn: '注意：证据里出现了疑似隐私内容，分享前请删除：',
         warnIp: '公网 IPv4 地址', warnEmail: '邮箱地址', warnSub: '订阅或节点链接', warnPath: '个人目录路径',
         mdTitle: 'Claude Fortress 自检摘要', mdRoute: '路线 / 组件', mdLevel: '自测等级', mdDate: '最早采集', mdExpires: '有效期至',
@@ -318,8 +448,8 @@
       },
       en: {
         title: 'Fortress Level Evidence Report', offline: 'Offline · no network',
-        subtitle: 'Drop in an evidence v3 JSON to compute your isolation level, what is still missing, and which checks are user-attested. Data stays in this page — nothing is uploaded or stored.',
-        guide: 'Interactive guide', inputTitle: '1. Load evidence', dropMain: 'Drop JSON files here', dropSub: 'Evidence v3 (required); optionally also the JSON exported by the WebRTC probe page',
+        subtitle: 'Load evidence v3 to see your isolation level, missing checks, and user attestations. Data stays in this page.',
+        guide: 'Interactive guide', inputTitle: '1. Load evidence', dropMain: 'Drop JSON files here', dropSub: 'Add evidence v3 for the same route and component in batches. You can also add a WebRTC probe result.',
         pick: 'Choose files…', pastePh: 'Or paste JSON here, then click "Parse"', parse: 'Parse', example: 'Load demo data', clear: 'Clear',
         optTitle: '2. Optional: current config hash', cfgLabel: 'SHA-256 of the configuration file on this machine now, to detect evidence collected on an older configuration',
         cfgHint: 'Windows: <code>Get-FileHash &lt;config&gt; -Algorithm SHA256</code>; Linux/OpenWrt: <code>sha256sum &lt;config&gt;</code>. Leave empty to skip.',
@@ -331,7 +461,10 @@
         invalidSub: 'Fix the issues below and load it again.', levelSub: 'Route {p}, max {max}', expires: 'Valid until {d}', expired: 'Expired — re-test',
         configChanged: 'Config changed — re-test', attested: 'User-attested: {list}', next: '{n} check(s) missing for {lvl}', top: 'Highest level for this route reached',
         done: 'Reached', blocked: 'Stuck here', locked: 'Locked', notInProfile: 'Not rated for this route',
-        loadedEvidence: 'Evidence v3', loadedProbe: 'WebRTC probe merged', parseError: 'Parse error: {e}', unknownJson: 'Unrecognised JSON (neither evidence v3 nor a WebRTC probe report)',
+        loadedEvidence: 'Evidence v3', loadedProbe: 'WebRTC probe result', remove: 'Remove {name}', downloadSingle: 'Download evidence JSON',
+        readError: 'Could not read file: {name}', parseError: 'Parse error: {e}', unknownJson: 'Unrecognised JSON (expected evidence v3 or a WebRTC probe report)',
+        mergeMismatch: 'Cannot merge: route or component mismatch.', mergeNested: 'Cannot merge: an input is already merged.',
+        mergeDuplicate: 'Cannot merge: duplicate request_id.', mergeError: 'Cannot merge: {error}',
         needEvidence: 'Load the WebRTC result together with an evidence v3 file', copied: 'Copied', privacyWarn: 'Heads-up: the evidence seems to contain private data — remove it before sharing:',
         warnIp: 'public IPv4 address', warnEmail: 'email address', warnSub: 'subscription or node link', warnPath: 'personal folder path',
         mdTitle: 'Claude Fortress self-test summary', mdRoute: 'Route / component', mdLevel: 'Self-tested level', mdDate: 'Oldest capture', mdExpires: 'Valid until',
@@ -340,7 +473,8 @@
       }
     };
     var lang = /^zh/i.test(new URLSearchParams(location.search).get('lang') || navigator.language || 'zh') ? 'zh' : 'en';
-    var evidence = null, probe = null, rawEvidenceText = '', lastResult = null;
+    var evidence = [], probe = null, exportEvidence = null;
+    var fileQueue = Promise.resolve(), loadGeneration = 0;
     var $ = function (id) { return document.getElementById(id); };
     function t(key, vars) { var s = I18N[lang][key] || key; Object.keys(vars || {}).forEach(function (k) { s = s.split('{' + k + '}').join(vars[k]); }); return s; }
     function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
@@ -379,23 +513,31 @@
       var data;
       try { data = JSON.parse(text); } catch (e) { toast(t('parseError', { e: e.message })); return; }
       if (data && data.probe === 'claude-fortress-offline-webrtc-v1') { probe = data; }
-      else if (data && typeof data === 'object' && 'schema_version' in data && 'checks' in data) { evidence = data; rawEvidenceText = text; }
+      else if (data && data.schema_version === 3 && 'checks' in data) { evidence.push({ data: data, text: text }); }
       else { toast(t('unknownJson')); return; }
       render();
     }
 
     function chipsLoaded() {
-      var html = '';
-      if (evidence) html += '<span class="chip ok">' + esc(t('loadedEvidence')) + ' · ' + esc(evidence.route) + '/' + esc(evidence.component) + '</span>';
-      if (probe) html += '<span class="chip ' + (evidence ? 'ok' : 'warn') + '">' + esc(evidence ? t('loadedProbe') : t('needEvidence')) + '</span>';
+      function chip(label, index, style) {
+        return '<span class="chip ' + style + '">' + esc(label) + '<button type="button" data-remove="' +
+          index + '" aria-label="' + esc(t('remove', { name: label })) + '">×</button></span>';
+      }
+      var html = evidence.map(function (entry, i) {
+        var ev = entry.data;
+        return chip((ev.target_alias || t('loadedEvidence')) + ' · ' + ev.route + '/' + ev.component, i, 'ok');
+      }).join('');
+      if (probe) html += chip(t(evidence.length ? 'loadedProbe' : 'needEvidence'), 'probe', evidence.length ? 'ok' : 'warn');
       $('loaded').innerHTML = html;
     }
 
-    function merged() {
-      if (!evidence) return null;
-      var copy = JSON.parse(JSON.stringify(evidence));
-      if (probe) FortressLevel.mergeWebrtcProbe(copy, probe);
-      return copy;
+    function mergeError(error) {
+      var messages = {
+        'cannot merge: route/component mismatch': 'mergeMismatch',
+        'cannot merge: input is already merged': 'mergeNested',
+        'cannot merge: duplicate request_id': 'mergeDuplicate'
+      };
+      return messages[error] ? t(messages[error]) : t('mergeError', { error: error.replace(/^cannot merge: /, '') });
     }
 
     function levelName(id) { var l = LEVELS.levels.filter(function (x) { return x.id === id; })[0]; return l ? l[lang] : id; }
@@ -408,11 +550,18 @@
 
     function render() {
       chipsLoaded();
-      var ev = merged();
-      if (!ev) { $('empty').hidden = false; $('out').hidden = true; $('exportCard').hidden = true; return; }
+      exportEvidence = null;
+      if (!evidence.length) { $('empty').hidden = false; $('out').hidden = true; $('exportCard').hidden = true; return; }
+      var combined = evidence.length > 1
+        ? FortressLevel.mergeEvidence(evidence.map(function (entry) { return entry.data; }))
+        : { merged: JSON.parse(evidence[0].text), errors: [] };
+      var ev = combined.merged;
+      if (ev && probe && ev.checks && typeof ev.checks === 'object' && !Array.isArray(ev.checks)) {
+        FortressLevel.mergeWebrtcProbe(ev, probe);
+      }
       var cfg = $('cfg').value.trim().toLowerCase();
-      var res = FortressLevel.evaluate(ev, LEVELS, Date.now(), cfg ? cfg : null);
-      lastResult = { res: res, ev: ev };
+      var res = ev ? FortressLevel.evaluate(ev, LEVELS, Date.now(), cfg || null)
+        : { valid: false, errors: combined.errors.map(mergeError) };
       $('empty').hidden = true; $('out').hidden = false;
 
       var badge = $('badge'), states = [];
@@ -429,10 +578,10 @@
         $('vTitle').textContent = 'Fortress ' + res.level + ' · ' + levelName(res.level);
         $('vSub').textContent = t('levelSub', { p: res.profile, max: res.max_level });
         states.push('<span class="chip ' + (res.expired ? 'bad' : 'ok') + '">' + esc(res.expired ? t('expired') : t('expires', { d: res.expires_utc })) + '</span>');
-        if (res.config_changed) states.push('<span class="chip bad">' + esc(t('configChanged')) + '</span>');
         if (res.attested.length) states.push('<span class="chip warn">' + esc(t('attested', { list: res.attested.join(', ') })) + '</span>');
       }
       if (res.valid) {
+        if (res.config_changed) states.push('<span class="chip bad">' + esc(t('configChanged')) + '</span>');
         if (res.missing_for_next.length) states.push('<span class="chip">' + esc(t('next', { lvl: res.missing_for_next[0].level, n: res.missing_for_next.length })) + '</span>');
         else if (res.level === res.max_level) states.push('<span class="chip ok">' + esc(t('top')) + '</span>');
       }
@@ -440,7 +589,9 @@
 
       var errs = $('errs');
       errs.hidden = res.valid; errs.innerHTML = res.errors.map(function (e) { return '<li>' + esc(e) + '</li>'; }).join('');
-      var warns = privacyScan(rawEvidenceText + (probe ? JSON.stringify(probe) : ''));
+      var rawTexts = evidence.map(function (entry) { return entry.text; });
+      if (probe) rawTexts.push(JSON.stringify(probe));
+      var warns = privacyScan(rawTexts.join('\n'));
       $('warns').hidden = !warns.length;
       $('warns').innerHTML = warns.length ? '<li>' + esc(t('privacyWarn')) + ' ' + esc(warns.join(', ')) + '</li>' : '';
 
@@ -464,8 +615,11 @@
         });
       }
       $('ladder').innerHTML = ladder;
-      $('exportCard').hidden = false;
-      $('md').textContent = markdown(res, ev);
+      $('exportCard').hidden = !ev;
+      $('md').textContent = ev ? markdown(res, ev) : '';
+      exportEvidence = res.valid ? ev : null;
+      $('btnDlJson').hidden = !exportEvidence;
+      $('btnDlJson').textContent = t(ev && ev.sources ? 'downloadJson' : 'downloadSingle');
     }
 
     function markdown(res, ev) {
@@ -516,13 +670,31 @@
     var drop = $('drop');
     ['dragenter', 'dragover'].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add('over'); }); });
     ['dragleave', 'drop'].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.remove('over'); }); });
-    function readFiles(files) { Array.prototype.forEach.call(files, function (f) { var r = new FileReader(); r.onload = function () { ingest(String(r.result)); }; r.readAsText(f); }); }
+    function readFiles(files) {
+      var batch = Array.from(files), generation = loadGeneration;
+      fileQueue = fileQueue.then(async function () {
+        for (var file of batch) {
+          if (generation !== loadGeneration) return;
+          var text;
+          try { text = await file.text(); }
+          catch (_) { if (generation === loadGeneration) toast(t('readError', { name: file.name })); continue; }
+          if (generation === loadGeneration) ingest(text);
+        }
+      });
+    }
     drop.addEventListener('drop', function (e) { readFiles(e.dataTransfer.files); });
     $('btnPick').onclick = function () { $('file').click(); };
     $('file').onchange = function (e) { readFiles(e.target.files); e.target.value = ''; };
     $('btnParse').onclick = function () { if ($('paste').value.trim()) ingest($('paste').value); };
     $('btnExample').onclick = demo;
-    $('btnClear').onclick = function () { evidence = null; probe = null; rawEvidenceText = ''; $('paste').value = ''; render(); };
+    $('loaded').onclick = function (e) {
+      var index = e.target.getAttribute('data-remove');
+      if (index === null) return;
+      if (index === 'probe') probe = null;
+      else evidence.splice(Number(index), 1);
+      render();
+    };
+    $('btnClear').onclick = function () { loadGeneration++; evidence = []; probe = null; $('paste').value = ''; render(); };
     $('cfg').oninput = render;
     $('btnLang').onclick = function () { lang = lang === 'zh' ? 'en' : 'zh'; applyLang(); };
     $('btnCopy').onclick = function () {
@@ -532,7 +704,10 @@
       });
     };
     $('btnDl').onclick = function () { download('fortress-level-summary.md', $('md').textContent, 'text/markdown'); };
-    $('btnDlJson').onclick = function () { if (lastResult) download('evidence-v3-merged.json', JSON.stringify(lastResult.ev, null, 2) + '\n', 'application/json'); };
+    $('btnDlJson').onclick = function () {
+      if (exportEvidence) download(exportEvidence.sources ? 'evidence-v3-merged.json' : 'evidence-v3.json',
+        JSON.stringify(exportEvidence, null, 2) + '\n', 'application/json');
+    };
     applyLang();
   })();
   </script>

@@ -1,0 +1,12 @@
+table inet vm_gate {
+    chain input {
+        type filter hook input priority filter; policy drop;
+    }
+    chain output {
+        type filter hook output priority filter; policy drop;
+    }
+    chain forward {
+        type filter hook forward priority filter; policy drop;
+        iifname "eth0" oifname "eth1" udp dport 53 accept
+    }
+}

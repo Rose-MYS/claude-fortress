@@ -1,0 +1,15 @@
+table inet vm_gate {
+    chain input {
+        type filter hook input priority filter; policy drop;
+        meta nfproto ipv6 counter name denied_input drop
+    }
+    chain output {
+        type filter hook output priority filter; policy drop;
+        meta nfproto ipv6 counter name denied_output drop
+    }
+    chain forward {
+        type filter hook forward priority filter; policy drop;
+        meta nfproto ipv6 counter name denied_forward drop
+        iifname "eth0" oifname "eth1" ip saddr 192.168.242.129 ip daddr 192.0.2.10 tcp dport 443 accept
+    }
+}

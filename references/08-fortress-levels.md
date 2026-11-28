@@ -34,7 +34,7 @@
 4. **`not_applicable` 只能用于本组件不要求的项**（比如 CLI 的 WebRTC、条件为 `false` 的条件项），并且必须写理由。把必测项标成 `not_applicable` 会让整份证据**无效**，而不是被跳过。
 5. **逐级判定，遇到第一个缺口就停**：L1 有一项没过，即使 L2 的演练全部通过，结果也只是 L0。
 6. **有效期**：从参与判定的检查项里**最早**的采集时间算起，30 天后标记为「过期」。
-7. **配置代际**：证据里的 `config_sha256` 和当前配置的哈希不一致时，标记为「配置已变」，必须重测。
+7. **配置代际**：当前配置的哈希与证据的 `config_sha256` 以及所有来源的哈希均不匹配时，标记为「配置已变」，必须重测。
 8. **证据无效时不给等级**：格式错误、未知检查项、缺时间戳等，一律不给等级，只列出错误。
 
 ## 4. 证据格式 v3
@@ -62,11 +62,26 @@
 ```bash
 python scripts/fortress_level.py <证据文件>.json
 python scripts/fortress_level.py <证据文件>.json --json --current-config-sha256 <当前配置哈希>
+python scripts/fortress_level.py guest.json gateway.json --json
+python scripts/fortress_level.py guest.json gateway.json --print-merged
 ```
 
 退出码：`0` 已判定（看输出里的等级），`2` 证据无效，`64` 用法错误。
 
-也可以用浏览器直接打开纯离线的 [assets/evidence-report.html](../assets/evidence-report.html)：拖入证据 v3（可同时拖入 [WebRTC 检测页](../assets/webrtc-probe.html)导出的 JSON，自动合并为 `browser_webrtc` 一项），页面会显示等级、逐级的检查项、还差哪几项，并能导出脱敏 Markdown 摘要。页面内嵌同一份 `levels.json`，CI 会核对它和 Python 计算器在 [tests/fixtures/levels/cases.json](../tests/fixtures/levels/cases.json) 的全部用例上结果一致。页面还会提示证据里疑似的公网 IP、邮箱、订阅链接和个人路径，但这只是提醒，分享前仍要自己检查。
+直接用浏览器打开纯离线的 [assets/evidence-report.html](../assets/evidence-report.html)，可以分批拖入或选择证据 v3，并通过来源标签单独移除文件。页面自动合并两份及以上的证据，显示等级、各级检查项和缺项，并支持下载合并后的 JSON 与脱敏 Markdown 摘要。[WebRTC 检测页](../assets/webrtc-probe.html)导出的结果会在合并后写入 `browser_webrtc`。页面内嵌同一份 `levels.json`，CI 会核对 Python 和页面的[评级用例](../tests/fixtures/levels/cases.json)与[合并用例](../tests/fixtures/levels/merge_cases.json)。分享前请检查证据和页面提示的疑似隐私内容。
+
+### 合并多份证据
+
+1. 输入至少两份 v3 证据，且 `route` 和 `component` 完全一致。路线或组件不一致时报 `cannot merge: route/component mismatch`。带有 `sources` 的输入报 `cannot merge: input is already merged`，重复的 `request_id` 报 `cannot merge: duplicate request_id`。
+2. `browser_used` 和 `remote_management` 分别取严。任一来源将某条件设为 `true`，合并后该条件就是 `true`。
+3. 每个检查项按 `fail` > `unknown` > `user_attested` > `pass` 取最差状态。这些状态都不存在时，取 `not_applicable`。如果该项所有记录都是 `not_run`，结果就是 `not_run`。同状态取 `captured_utc` 最早的记录，缺时间排在最后，时间相同时按 `request_id` 取第一份。`not_applicable` 的理由取 `request_id` 排序后的第一条记录。
+4. 保留选中记录的 `method`、`tool`、`raw_sha256` 和 `captured_utc`，在 `note` 前加 `[from <target_alias>] `。
+5. `sources` 按 `request_id` 排序，每项包含 `request_id`、`target_alias`、`config_sha256` 和 `captured_utc`。顶层 `target_alias` 按此顺序用 `+` 连接。把各来源的配置哈希排序、用换行连接并以 UTF-8 计算 SHA-256，得到顶层 `config_sha256`。对排序后的请求 ID 同样计算，取前 32 位作为顶层 `request_id`。顶层 `captured_utc` 取最新时间，时间相同时取排序后的第一份。`level_claimed` 为 `null`，`private_evidence_reference` 为 `"<PRIVATE_EVIDENCE_PATH>"`。
+6. 当前哈希匹配合并哈希或任一来源哈希时，`config_changed` 为 `false`。输入文件不会被计算器改写，`--print-merged` 将有效的合并证据输出至 stdout。
+
+### 已知限制
+
+路线 B 的 Windows 客机和 OpenWrt 网关离线采集器在本地 IPv6 检查正常时最多给出 `unknown`，仍需 WAN 侧抓包。`ipv6` 是 L1 必测项，且不允许用户自述。因此，即使合并两份离线证据，现有离线工具也无法支持路线 B 的 L1。需要后续的 B 档中性探测采集器补齐实测证据。
 
 ## 6. 对外怎么说
 
