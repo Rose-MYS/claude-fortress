@@ -45,6 +45,10 @@
   3. **负向断网演练**：网关临时阻断上游入口，确认客机双路径彻底断网、旧连接不残留、不回退直连，到期后自动恢复；
   4. **泄漏与边界复核**：独立核对 DNS、IPv6、UDP、WebRTC 与第二网卡情况。未在本机跑通前，切勿接入正式账号。
 
+## 致谢
+
+Claude Fortress 受 DUNHKpcc 及社区的 [**Claude-Guardian**](https://github.com/DUNHKpcc/Claude-Guardian) 启发。本项目的多项核心思路——从「不接触 Claude/Anthropic」的阶段起步（Guardian 的 PC0）、A/B/C 分档授权、「已确认 / 还没查 / 下一步」三段汇报、离线 WebRTC 检测页、委托性回复不自动绑定路线——都来自该项目。Claude Fortress 为独立重写（不包含 Guardian 的代码或文字），侧重客机外隔离（OpenWrt 默认拒绝网关）、S0–S4 证据门禁和在你本机亲自自检。需要订阅、支付、线路优化、旧设备清理等更广覆盖和脚本化流程的，推荐使用 Claude-Guardian。
+
 ## 发布与许可
 
 自有内容使用 [MIT](LICENSE)；见 [打包和来源复核清单](references/release-review.md)。不要提交实值、账号资料、日志或参考资料原包，不要公开整个工作仓。遵守实际所在地与服务资格要求，登录、付款和申诉由用户本人完成。
