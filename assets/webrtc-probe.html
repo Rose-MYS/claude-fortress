@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Claude Fortress · Offline WebRTC &amp; Browser Hygiene Probe</title>
+  <style>
+    :root {
+      --bg: #0b1220; --card: #121c30; --border: #253452; --text: #e6edf7;
+      --muted: #93a4c3; --ok: #34d399; --warn: #fbbf24; --err: #f87171; --accent: #60a5fa;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+           background: var(--bg); color: var(--text); line-height: 1.55; padding: 24px; }
+    .wrap { max-width: 820px; margin: 0 auto; }
+    h1 { margin: 0 0 6px; font-size: 1.4rem; }
+    .sub { color: var(--muted); font-size: 0.92rem; margin-bottom: 18px; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 18px; margin-bottom: 16px; }
+    .row { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+    .row:last-child { border-bottom: none; }
+    .k { color: var(--muted); }
+    .v { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; text-align: right; word-break: break-all; }
+    .ok { color: var(--ok); font-weight: 600; }
+    .warn { color: var(--warn); font-weight: 600; }
+    .err { color: var(--err); font-weight: 600; }
+    button { background: var(--accent); color: #07111f; border: none; border-radius: 8px;
+             padding: 8px 14px; font-weight: 600; cursor: pointer; margin-right: 8px; }
+    button.sec { background: transparent; color: var(--text); border: 1px solid var(--border); }
+    pre { background: #080d18; border: 1px solid var(--border); border-radius: 8px; padding: 12px;
+          overflow-x: auto; font-size: 0.84rem; margin: 10px 0 0; }
+    .note { font-size: 0.84rem; color: var(--muted); margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Claude Fortress · 纯离线 WebRTC / 时区 / 语言检测页</h1>
+    <div class="sub">
+      Offline-only S1 browser hygiene probe (zero external network requests, zero STUN/TURN, zero Claude contact).<br />
+      仅在本机目标浏览器 Profile 内打开；本页不发任何外网请求，只采集本地 WebRTC ICE 候选、时区与语言环境。
+    </div>
+
+    <div class="card">
+      <div style="margin-bottom:12px;">
+        <button id="btnRun">重新检测 / Re-run Probe</button>
+        <button id="btnCopy" class="sec">复制脱敏 JSON / Copy JSON</button>
+      </div>
+      <div id="rows"></div>
+    </div>
+
+    <div class="card">
+      <div class="k">S1 证据摘要（JSON，仅含本地观测，不含公网 IP）</div>
+      <pre id="jsonOut">Running...</pre>
+      <div class="note">
+        判定说明：无 STUN/TURN 条件下 <code>webrtc_candidates</code> 应为空数组 <code>[]</code>（或 API 被策略阻断）；
+        <code>timezone</code> 与 <code>language</code> 应与预期住宅出口地区一致。本页不证明 DNS 路径或公网 IPv6 阻断，须另行核验。
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let lastReport = null;
+
+    function addRow(parent, label, value, cls = '') {
+      const div = document.createElement('div');
+      div.className = 'row';
+      const k = document.createElement('div');
+      k.className = 'k';
+      k.textContent = label;
+      const v = document.createElement('div');
+      v.className = 'v ' + cls;
+      v.textContent = value;
+      div.append(k, v);
+      parent.append(div);
+    }
+
+    async function probeWebRTC() {
+      if (typeof RTCPeerConnection === 'undefined') {
+        return { status: 'api_unavailable', candidates: [] };
+      }
+      const candidates = [];
+      let gathering = 'unknown';
+      try {
+        const pc = new RTCPeerConnection({ iceServers: [] });
+        pc.onicecandidate = (e) => {
+          if (e.candidate && e.candidate.candidate) {
+            candidates.push(e.candidate.candidate);
+          }
+        };
+        pc.createDataChannel('cf-offline-probe');
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        await Promise.race([
+          new Promise((res) => setTimeout(res, 1500)),
+          new Promise((res) => {
+            pc.onicegatheringstatechange = () => {
+              if (pc.iceGatheringState === 'complete') res();
+            };
+          }),
+        ]);
+        gathering = pc.iceGatheringState;
+        pc.close();
+        return { status: candidates.length === 0 ? 'pass_zero_candidates' : 'candidates_observed', gathering, candidates };
+      } catch (err) {
+        return { status: 'blocked_or_error', error: String(err), candidates: [] };
+      }
+    }
+
+    async function runProbe() {
+      const rows = document.getElementById('rows');
+      rows.innerHTML = '';
+      document.getElementById('jsonOut').textContent = 'Probing...';
+
+      const rtc = await probeWebRTC();
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'unknown';
+      const lang = navigator.language || 'unknown';
+      const langs = Array.isArray(navigator.languages) ? navigator.languages : [];
+      const webdriver = Boolean(navigator.webdriver);
+
+      const report = {
+        probe: 'claude-fortress-offline-webrtc-v1',
+        captured_utc: new Date().toISOString(),
+        webrtc_status: rtc.status,
+        webrtc_gathering: rtc.gathering || 'n/a',
+        webrtc_candidate_count: rtc.candidates.length,
+        webrtc_has_mdns: rtc.candidates.some((c) => c.includes('.local')),
+        timezone: tz,
+        utc_offset_minutes: -new Date().getTimezoneOffset(),
+        language: lang,
+        languages: langs,
+        webdriver,
+        platform: navigator.platform || 'unknown',
+      };
+      lastReport = report;
+
+      const rtcCls = report.webrtc_candidate_count === 0 ? 'ok' : 'err';
+      const rtcLabel = report.webrtc_candidate_count === 0
+        ? `PASS (${report.webrtc_status}, 0 candidates)`
+        : `CHECK (${report.webrtc_candidate_count} candidate(s) observed)`;
+
+      addRow(rows, 'WebRTC Local ICE (no STUN/TURN)', rtcLabel, rtcCls);
+      addRow(rows, 'Timezone (Intl)', `${tz} (UTC${report.utc_offset_minutes >= 0 ? '+' : ''}${(report.utc_offset_minutes / 60).toFixed(1)})`);
+      addRow(rows, 'navigator.language / languages', `${lang} / [${langs.join(', ')}]`);
+      addRow(rows, 'navigator.webdriver', String(webdriver), webdriver ? 'warn' : 'ok');
+      addRow(rows, 'navigator.platform', report.platform);
+
+      document.getElementById('jsonOut').textContent = JSON.stringify(report, null, 2);
+    }
+
+    document.getElementById('btnRun').addEventListener('click', runProbe);
+    document.getElementById('btnCopy').addEventListener('click', async () => {
+      if (!lastReport) return;
+      try {
+        await navigator.clipboard.writeText(JSON.stringify(lastReport, null, 2));
+        document.getElementById('btnCopy').textContent = '已复制 / Copied';
+        setTimeout(() => { document.getElementById('btnCopy').textContent = '复制脱敏 JSON / Copy JSON'; }, 1500);
+      } catch {
+        // Fallback: select pre text manually
+      }
+    });
+
+    runProbe();
+  </script>
+</body>
+</html>
